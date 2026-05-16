@@ -64,6 +64,17 @@ const statusIcons: Record<Status, React.ReactNode> = {
 type SortKey = keyof Incident;
 type SortDir = 'asc' | 'desc';
 
+// Helper function to format dates as dd/mm/yy
+const formatDateDDMMYY = (dateString: string | Date): string => {
+  const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+  if (isNaN(date.getTime())) return dateString as string;
+  
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = String(date.getFullYear()).slice(-2);
+  return `${day}/${month}/${year}`;
+};
+
 export default function Dashboard({
   incidents,
   userEmail,
@@ -124,7 +135,7 @@ export default function Dashboard({
      const rows = filtered.map(incident => [
        incident.srNo,
        incident.incidentRefNo,
-       new Date(incident.incidentDate).toLocaleDateString('en-GB', { year: '2-digit', month: '2-digit', day: '2-digit' }),
+       formatDateDDMMYY(incident.incidentDate),
        incident.incidentDetails,
        incident.incidentCategory,
        incident.likelihood,
@@ -198,7 +209,7 @@ export default function Dashboard({
                  <tr>
                    <td>${incident.srNo}</td>
                    <td>${incident.incidentRefNo}</td>
-                   <td>${new Date(incident.incidentDate).toLocaleDateString('en-GB', { year: '2-digit', month: '2-digit', day: '2-digit' })}</td>
+                   <td>${formatDateDDMMYY(incident.incidentDate)}</td>
                    <td>${incident.incidentDetails}</td>
                    <td>${incident.incidentCategory}</td>
                    <td>${incident.likelihood}</td>
@@ -414,9 +425,7 @@ export default function Dashboard({
                         </button>
                       </td>
                       <td className="px-4 py-3.5 text-slate-600 whitespace-nowrap">
-                        {new Date(incident.incidentDate).toLocaleDateString('en-GB', {
-                          day: '2-digit', month: '2-digit', year: '2-digit',
-                        })}
+                        {formatDateDDMMYY(incident.incidentDate)}
                       </td>
                       <td className="px-4 py-3.5 text-slate-700">
                         <p>{incident.incidentDetails}</p>

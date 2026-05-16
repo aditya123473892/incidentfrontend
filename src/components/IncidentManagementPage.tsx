@@ -32,6 +32,17 @@ const statusColors: Record<Status, string> = {
   Closed: 'bg-slate-100 text-slate-600 ring-slate-200',
 };
 
+// Helper function to format dates as dd/mm/yy
+const formatDateDDMMYY = (dateString: string | Date): string => {
+  const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+  if (isNaN(date.getTime())) return dateString as string;
+  
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = String(date.getFullYear()).slice(-2);
+  return `${day}/${month}/${year}`;
+};
+
 export default function IncidentManagementPage({
   incidents,
   userEmail,
@@ -80,7 +91,7 @@ export default function IncidentManagementPage({
     const rows = filtered.map(incident => [
       incident.srNo,
       incident.incidentRefNo,
-      new Date(incident.incidentDate).toLocaleDateString('en-GB', { year: '2-digit', month: '2-digit', day: '2-digit' }),
+       formatDateDDMMYY(incident.incidentDate),
       incident.incidentDetails,
       incident.incidentCategory,
       incident.impact,
@@ -152,7 +163,7 @@ export default function IncidentManagementPage({
                 <tr>
                   <td>${incident.srNo}</td>
                   <td>${incident.incidentRefNo}</td>
-                  <td>${new Date(incident.incidentDate).toLocaleDateString('en-GB', { year: '2-digit', month: '2-digit', day: '2-digit' })}</td>
+                  <td>${formatDateDDMMYY(incident.incidentDate)}</td>
                   <td>${incident.incidentDetails}</td>
                   <td>${incident.incidentCategory}</td>
                   <td>${incident.impact}</td>
@@ -267,7 +278,7 @@ export default function IncidentManagementPage({
                   <tr key={incident.id} className="hover:bg-slate-50">
                     <td className="px-3 py-2 text-slate-500 font-mono text-xs">{incident.srNo}</td>
                     <td className="px-3 py-2 font-medium text-blue-600">{incident.incidentRefNo}</td>
-                    <td className="px-3 py-2 text-slate-600">{new Date(incident.incidentDate).toLocaleDateString('en-GB', { year: '2-digit', month: '2-digit', day: '2-digit' })}</td>
+                    <td className="px-3 py-2 text-slate-600">{formatDateDDMMYY(incident.incidentDate)}</td>
                     <td className="px-3 py-2 text-slate-700 max-w-xs truncate">{incident.incidentDetails}</td>
                     <td className="px-3 py-2"><span className="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded-full">{incident.incidentCategory}</span></td>
                     <td className="px-3 py-2 text-slate-600">{incident.impact}</td>
