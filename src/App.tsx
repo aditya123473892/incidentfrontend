@@ -4,7 +4,7 @@ import SignupPage from './components/SignupPage';
 import Dashboard from './components/Dashboard';
 import { Incident } from './types';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://incidentbackend.onrender.com/api';
 
 type AuthMode = 'login' | 'signup';
 
