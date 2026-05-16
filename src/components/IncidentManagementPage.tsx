@@ -224,7 +224,6 @@ function IncidentManagementForm({ incident, nextSrNo, onSave, onClose }: Inciden
     status: 'Open',
   });
 
-  const { High: { High: Critical, Medium: High, Low: HighLow } } = { High: { High: 'Critical', Medium: 'High', Low: 'High' } };
   const getPriority = (impact: string, urgency: string): Priority => {
     const matrix: Record<string, Record<string, Priority>> = {
       High: { High: 'Critical', Medium: 'High', Low: 'High' },
