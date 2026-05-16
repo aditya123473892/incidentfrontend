@@ -75,6 +75,104 @@ export default function IncidentManagementPage({
   const SortIcon = ({ k }: { k: keyof IncidentManagement }) =>
     sortKey === k ? (sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />) : <ChevronUp className="w-3.5 h-3.5 opacity-20" />;
 
+  const handleDownloadExcel = () => {
+    const headers = ['Sr. No.', 'Ref No.', 'Date', 'Details', 'Category', 'Impact', 'Urgency', 'Priority', 'Response Target', 'Resolution Target', 'Status'];
+    const rows = filtered.map(incident => [
+      incident.srNo,
+      incident.incidentRefNo,
+      new Date(incident.incidentDate).toLocaleDateString('en-GB', { year: '2-digit', month: '2-digit', day: '2-digit' }),
+      incident.incidentDetails,
+      incident.incidentCategory,
+      incident.impact,
+      incident.urgency,
+      incident.priority,
+      incident.responseTarget,
+      incident.resolutionTarget,
+      incident.status
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => 
+        row.map(cell => 
+          `"${String(cell).replace(/"/g, '""')}"`
+        ).join(',')
+      )
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `incident-management_${new Date().toISOString().slice(0,10)}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Incident Management Report</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            table { border-collapse: collapse; width: 100%; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+            .header { text-align: center; margin-bottom: 20px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Incident Management Report</h1>
+            <p>Generated on: ${new Date().toLocaleString()}</p>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Sr. No.</th>
+                <th>Ref No.</th>
+                <th>Date</th>
+                <th>Details</th>
+                <th>Category</th>
+                <th>Impact</th>
+                <th>Urgency</th>
+                <th>Priority</th>
+                <th>Response Target</th>
+                <th>Resolution Target</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filtered.map(incident => `
+                <tr>
+                  <td>${incident.srNo}</td>
+                  <td>${incident.incidentRefNo}</td>
+                  <td>${new Date(incident.incidentDate).toLocaleDateString('en-GB', { year: '2-digit', month: '2-digit', day: '2-digit' })}</td>
+                  <td>${incident.incidentDetails}</td>
+                  <td>${incident.incidentCategory}</td>
+                  <td>${incident.impact}</td>
+                  <td>${incident.urgency}</td>
+                  <td>${incident.priority}</td>
+                  <td>${incident.responseTarget}</td>
+                  <td>${incident.resolutionTarget}</td>
+                  <td>${incident.status}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  };
+
   return (
     <div className="min-h-screen bg-slate-50">
       <nav className="bg-slate-900 text-white shadow-lg">
@@ -125,6 +223,22 @@ export default function IncidentManagementPage({
                 {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
               </select>
             </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleDownloadExcel}
+                className="flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm"
+              >
+                <span className="mr-1">📥</span>
+                Download Excel
+              </button>
+              <button
+                onClick={handlePrint}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm"
+              >
+                <span className="mr-1">🖨️</span>
+                Print
+              </button>
+            </div>
             <button
               onClick={() => { setEditTarget(null); setFormOpen(true); }}
               className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-lg text-sm"
@@ -153,7 +267,7 @@ export default function IncidentManagementPage({
                   <tr key={incident.id} className="hover:bg-slate-50">
                     <td className="px-3 py-2 text-slate-500 font-mono text-xs">{incident.srNo}</td>
                     <td className="px-3 py-2 font-medium text-blue-600">{incident.incidentRefNo}</td>
-                    <td className="px-3 py-2 text-slate-600">{new Date(incident.incidentDate).toLocaleDateString()}</td>
+                    <td className="px-3 py-2 text-slate-600">{new Date(incident.incidentDate).toLocaleDateString('en-GB', { year: '2-digit', month: '2-digit', day: '2-digit' })}</td>
                     <td className="px-3 py-2 text-slate-700 max-w-xs truncate">{incident.incidentDetails}</td>
                     <td className="px-3 py-2"><span className="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded-full">{incident.incidentCategory}</span></td>
                     <td className="px-3 py-2 text-slate-600">{incident.impact}</td>

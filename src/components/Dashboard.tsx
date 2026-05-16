@@ -114,16 +114,117 @@ export default function Dashboard({
     critical: incidents.filter((i) => i && i.riskLevel === 'Critical').length,
   };
 
-  const nextSrNo = incidents.length > 0
-    ? Math.max(...incidents.map((i) => i.srNo || 0)) + 1
-    : 1;
+   const nextSrNo = incidents.length > 0
+     ? Math.max(...incidents.map((i) => i.srNo || 0)) + 1
+     : 1;
 
-  const SortIcon = ({ k }: { k: SortKey }) =>
-    sortKey === k ? (
-      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />
-    ) : (
-      <ChevronUp className="w-3.5 h-3.5 opacity-20" />
-    );
+   const handleDownloadExcel = () => {
+     // Convert filtered data to CSV format
+     const headers = ['Sr. No.', 'Ref No.', 'Date', 'Description', 'Category', 'Likelihood', 'Impact', 'Priority', 'Risk Score', 'Status', 'RCA'];
+     const rows = filtered.map(incident => [
+       incident.srNo,
+       incident.incidentRefNo,
+       new Date(incident.incidentDate).toLocaleDateString('en-GB', { year: '2-digit', month: '2-digit', day: '2-digit' }),
+       incident.incidentDetails,
+       incident.incidentCategory,
+       incident.likelihood,
+       incident.impact,
+       incident.priority,
+       incident.riskScore,
+       incident.status,
+       incident.rca || ''
+     ]);
+
+     // Create CSV content
+     const csvContent = [
+       headers.join(','),
+       ...rows.map(row => 
+         row.map(cell => 
+           `"${String(cell).replace(/"/g, '""')}"`
+         ).join(',')
+       )
+     ].join('\n');
+
+     // Create blob and download
+     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+     const url = URL.createObjectURL(blob);
+     const link = document.createElement('a');
+     link.setAttribute('href', url);
+     link.setAttribute('download', `incidents_${new Date().toISOString().slice(0,10)}.csv`);
+     link.style.visibility = 'hidden';
+     document.body.appendChild(link);
+     link.click();
+     document.body.removeChild(link);
+   };
+
+   const handlePrint = () => {
+     // Create a printable version of the table
+     const printWindow = window.open('', '_blank');
+     printWindow.document.write(`
+       <html>
+         <head>
+           <title>Incidents Report</title>
+           <style>
+             body { font-family: Arial, sans-serif; margin: 20px; }
+             table { border-collapse: collapse; width: 100%; }
+             th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+             th { background-color: #f2f2f2; }
+             .header { text-align: center; margin-bottom: 20px; }
+           </style>
+         </head>
+         <body>
+           <div class="header">
+             <h1>Incidents Report</h1>
+             <p>Generated on: ${new Date().toLocaleString()}</p>
+           </div>
+           <table>
+             <thead>
+               <tr>
+                 <th>Sr. No.</th>
+                 <th>Ref No.</th>
+                 <th>Date</th>
+                 <th>Description</th>
+                 <th>Category</th>
+                 <th>Likelihood</th>
+                 <th>Impact</th>
+                 <th>Priority</th>
+                 <th>Risk Score</th>
+                 <th>Status</th>
+                 <th>RCA</th>
+               </tr>
+             </thead>
+             <tbody>
+               ${filtered.map(incident => `
+                 <tr>
+                   <td>${incident.srNo}</td>
+                   <td>${incident.incidentRefNo}</td>
+                   <td>${new Date(incident.incidentDate).toLocaleDateString('en-GB', { year: '2-digit', month: '2-digit', day: '2-digit' })}</td>
+                   <td>${incident.incidentDetails}</td>
+                   <td>${incident.incidentCategory}</td>
+                   <td>${incident.likelihood}</td>
+                   <td>${incident.impact}</td>
+                   <td>${incident.priority}</td>
+                   <td>${incident.riskScore}</td>
+                   <td>${incident.status}</td>
+                   <td>${incident.rca || ''}</td>
+                 </tr>
+               `).join('')}
+             </tbody>
+           </table>
+         </body>
+       </html>
+     `);
+     printWindow.document.close();
+     printWindow.focus();
+     printWindow.print();
+   };
+
+   const SortIcon = ({ k }: { k: SortKey }) =>
+     sortKey === k ? (
+       sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />
+     ) : (
+       <ChevronUp className="w-3.5 h-3.5 opacity-20" />
+     );
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -190,47 +291,63 @@ export default function Dashboard({
         {/* Controls */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4">
           <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-            <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full sm:w-auto">
-              <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search incidents..."
-                  className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-slate-400" />
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value as Status | 'All')}
-                  className="border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50"
-                >
-                  <option value="All">All Status</option>
-                  {(['Open', 'In Progress', 'Resolved', 'Closed'] as Status[]).map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-                <select
-                  value={filterPriority}
-                  onChange={(e) => setFilterPriority(e.target.value as Priority | 'All')}
-                  className="border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50"
-                >
-                  <option value="All">All Priority</option>
-                  {(['Critical', 'High', 'Medium', 'Low'] as Priority[]).map((p) => (
-                    <option key={p} value={p}>{p}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <button
-              onClick={() => { setEditTarget(null); setFormOpen(true); }}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm whitespace-nowrap"
-            >
-              <Plus className="w-4 h-4" />
-              New Incident
-            </button>
+             <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full sm:w-auto">
+               <div className="relative flex-1 max-w-sm">
+                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                 <input
+                   value={search}
+                   onChange={(e) => setSearch(e.target.value)}
+                   placeholder="Search incidents..."
+                   className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50"
+                 />
+               </div>
+               <div className="flex items-center gap-2">
+                 <Filter className="w-4 h-4 text-slate-400" />
+                 <select
+                   value={filterStatus}
+                   onChange={(e) => setFilterStatus(e.target.value as Status | 'All')}
+                   className="border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50"
+                 >
+                   <option value="All">All Status</option>
+                   {(['Open', 'In Progress', 'Resolved', 'Closed'] as Status[]).map((s) => (
+                     <option key={s} value={s}>{s}</option>
+                   ))}
+                 </select>
+                 <select
+                   value={filterPriority}
+                   onChange={(e) => setFilterPriority(e.target.value as Priority | 'All')}
+                   className="border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50"
+                 >
+                   <option value="All">All Priority</option>
+                   {(['Critical', 'High', 'Medium', 'Low'] as Priority[]).map((p) => (
+                     <option key={p} value={p}>{p}</option>
+                   ))}
+                 </select>
+               </div>
+             </div>
+             <div className="flex items-center gap-3">
+               <button
+                 onClick={handleDownloadExcel}
+                 className="flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm"
+               >
+                 <span className="mr-1">📥</span>
+                 Download Excel
+               </button>
+               <button
+                 onClick={handlePrint}
+                 className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm"
+               >
+                 <span className="mr-1">🖨️</span>
+                 Print
+               </button>
+             </div>
+             <button
+               onClick={() => { setEditTarget(null); setFormOpen(true); }}
+               className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm whitespace-nowrap"
+             >
+               <Plus className="w-4 h-4" />
+               New Incident
+             </button>
           </div>
         </div>
 
@@ -298,7 +415,7 @@ export default function Dashboard({
                       </td>
                       <td className="px-4 py-3.5 text-slate-600 whitespace-nowrap">
                         {new Date(incident.incidentDate).toLocaleDateString('en-GB', {
-                          day: '2-digit', month: 'short', year: 'numeric',
+                          day: '2-digit', month: '2-digit', year: '2-digit',
                         })}
                       </td>
                       <td className="px-4 py-3.5 text-slate-700">
