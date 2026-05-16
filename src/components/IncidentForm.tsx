@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { X, Lock } from 'lucide-react';
-import { Incident, Likelihood, Impact, Priority, Status, Category } from '../types';
+import { Incident, Likelihood, Impact, Priority, Status, Category, RiskLevel } from '../types';
 
 interface IncidentFormProps {
   incident: Incident | null;
@@ -11,9 +11,9 @@ interface IncidentFormProps {
 }
 
 const likelihoods: Likelihood[] = ['Very Low', 'Low', 'Medium', 'High', 'Very High'];
-const impacts: Impact[]        = ['Very Low', 'Low', 'Medium', 'High', 'Very High'];
-const priorities: Priority[]   = ['Very low', 'Low', 'Medium', 'High', 'Very High'];
-const statuses: Status[]       = ['Open', 'In Progress', 'Resolved', 'Closed'];
+const impacts: Impact[] = ['Very Low', 'Low', 'Medium', 'High', 'Very High'];
+const priorities: Priority[] = ['Low', 'Medium', 'High', 'Critical'];
+const statuses: Status[] = ['Open', 'In Progress', 'Resolved', 'Closed'];
 const categories: Category[]   = ['Network', 'Hardware', 'Software', 'Security', 'Database', 'Application', 'Other'];
 
 const LIKELIHOOD_MAP: Record<Likelihood, number> = {
@@ -23,7 +23,7 @@ const IMPACT_MAP: Record<Impact, number> = {
   'Very Low':  1, Low: 2, Medium: 3, High: 4, 'Very High': 5,
 };
 
-function getRiskLevel(score: number): string {
+function getRiskLevel(score: number): RiskLevel {
   if (score >= 17) return 'Critical';
   if (score >= 10) return 'High';
   if (score >=  5) return 'Medium';
@@ -48,6 +48,8 @@ export default function IncidentForm({ incident, nextSrNo, isAdmin = true, onSav
     likelihood:      incident?.likelihood      ?? 'Medium',
     impact:          incident?.impact          ?? 'Medium',
     priority:        incident?.priority        ?? 'Medium',
+    riskScore:       incident?.riskScore       ?? 9,
+    riskLevel:       incident?.riskLevel       ?? 'Medium',
     rca:             incident?.rca             ?? '',
     status:          incident?.status          ?? 'Open',
   });

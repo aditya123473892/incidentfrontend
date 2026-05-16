@@ -2,9 +2,9 @@ import { useState } from 'react';
 import {
   Plus, Search, LogOut, Shield, Pencil, Trash2,
   ChevronUp, ChevronDown, Filter, AlertCircle, Clock,
-  CheckCircle2, XCircle, BarChart3,
+  CheckCircle2, XCircle, BarChart3, X,
 } from 'lucide-react';
-import { Incident, Priority, Status, Category, Likelihood, Impact, RiskLevel } from '../types';
+import { Incident, Priority, Status, Likelihood, Impact, RiskLevel } from '../types';
 import IncidentForm from './IncidentForm';
 
 interface DashboardProps {
@@ -18,11 +18,10 @@ interface DashboardProps {
 }
 
 const priorityColors: Record<Priority, string> = {
-  'Very low': 'bg-red-100 text-red-700 ring-red-200',
   Low: 'bg-orange-100 text-orange-700 ring-orange-200',
   Medium: 'bg-yellow-100 text-yellow-700 ring-yellow-200',
   High: 'bg-green-100 text-green-700 ring-green-200',
-  'Very High': 'bg-green-100 text-green-700 ring-green-200',
+  Critical: 'bg-red-100 text-red-700 ring-red-200',
 };
 
 const likelihoodColors: Record<Likelihood, string> = {
@@ -137,7 +136,7 @@ export default function Dashboard({
             </div>
             <div>
               <span className="font-bold text-lg tracking-tight">IncidentIQ</span>
-              <span className="ml-2 text-slate-400 text-xs hidden sm:inline">Incident Management System</span>
+              <span className="ml-2 text-slate-400 text-xs hidden sm:inline"> Management System</span>
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -153,7 +152,7 @@ export default function Dashboard({
                   ? 'bg-purple-500/15 text-purple-300 border border-purple-500/25'
                   : 'bg-slate-500/15 text-slate-300 border border-slate-500/20'
               }`}>
-                {userRole === 'admin' ? 'Admin' : 'User'}
+                {userRole === 'admin' ? 'Admin' : userRole === 'risk' ? 'Risk' : userRole}
               </span>
             )}
             <button

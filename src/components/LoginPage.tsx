@@ -1,13 +1,24 @@
 import { useState } from 'react';
-import { Shield, Eye, EyeOff, AlertTriangle, Loader2 } from 'lucide-react';
+import { Shield, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 
 interface LoginPageProps {
   onLogin: (email: string, password: string) => Promise<boolean>;
   onSwitchToSignup: () => void;
+  appName?: string;
+  subtitle?: string;
+  defaultEmail?: string;
+  demoPassword?: string;
 }
 
-export default function LoginPage({ onLogin, onSwitchToSignup }: LoginPageProps) {
-  const [email, setEmail] = useState('');
+export default function LoginPage({
+  onLogin,
+  onSwitchToSignup,
+  appName = 'Team Elogisol',
+  subtitle = ' Management System',
+  defaultEmail = 'admin@company.com',
+  demoPassword = 'admin123',
+}: LoginPageProps) {
+  const [email, setEmail] = useState(defaultEmail);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -37,8 +48,8 @@ export default function LoginPage({ onLogin, onSwitchToSignup }: LoginPageProps)
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600 shadow-lg shadow-blue-600/30 mb-4">
             <Shield className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">IncidentIQ</h1>
-          <p className="mt-2 text-slate-400 text-sm">Incident Management System</p>
+          <h1 className="text-3xl font-bold text-white tracking-tight">{appName}</h1>
+          <p className="mt-2 text-slate-400 text-sm">{subtitle}</p>
         </div>
 
         <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl">
@@ -55,7 +66,7 @@ export default function LoginPage({ onLogin, onSwitchToSignup }: LoginPageProps)
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                placeholder="admin@company.com"
+                placeholder={defaultEmail}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm"
               />
             </div>
@@ -68,7 +79,7 @@ export default function LoginPage({ onLogin, onSwitchToSignup }: LoginPageProps)
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  placeholder="••••••••"
+                  placeholder="Password"
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pr-12 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm"
                 />
                 <button
@@ -106,8 +117,8 @@ export default function LoginPage({ onLogin, onSwitchToSignup }: LoginPageProps)
 
           <div className="mt-6 pt-5 border-t border-white/10">
             <p className="text-center text-xs text-slate-500">
-              Demo credentials: <span className="text-slate-400">admin@company.com</span> /{' '}
-              <span className="text-slate-400">admin123</span>
+              Demo credentials: <span className="text-slate-400">{defaultEmail}</span> /{' '}
+              <span className="text-slate-400">{demoPassword}</span>
             </p>
             <p className="text-center text-sm text-slate-400 mt-3">
               Don't have an account?{' '}

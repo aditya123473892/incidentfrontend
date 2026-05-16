@@ -3,7 +3,7 @@ import { Shield, Eye, EyeOff, AlertTriangle, UserPlus, Loader2 } from 'lucide-re
 
 interface SignupPageProps {
   onSwitch: () => void;
-  onSignup: (fullName: string, email: string, password: string, role: 'admin' | 'user') => Promise<boolean>;
+  onSignup: (fullName: string, email: string, password: string, role: 'admin' | 'user' | 'risk' | 'incident') => Promise<boolean>;
 }
 
 export default function SignupPage({ onSwitch, onSignup }: SignupPageProps) {
@@ -11,7 +11,7 @@ export default function SignupPage({ onSwitch, onSignup }: SignupPageProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState<'admin' | 'user'>('user');
+  const [role, setRole] = useState<'admin' | 'user' | 'risk' | 'incident'>('user');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
@@ -56,8 +56,8 @@ export default function SignupPage({ onSwitch, onSignup }: SignupPageProps) {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600 shadow-lg shadow-blue-600/30 mb-4">
             <Shield className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">IncidentIQ</h1>
-          <p className="mt-2 text-slate-400 text-sm">Incident Management System</p>
+          <h1 className="text-3xl font-bold text-white tracking-tight">Team Elogisol</h1>
+          <p className="mt-2 text-slate-400 text-sm">Management System</p>
         </div>
 
         <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl">
@@ -96,10 +96,12 @@ export default function SignupPage({ onSwitch, onSignup }: SignupPageProps) {
               <label className="block text-sm font-medium text-slate-300 mb-1.5">Role</label>
               <select
                 value={role}
-                onChange={(e) => setRole(e.target.value as 'admin' | 'user')}
+                onChange={(e) => setRole(e.target.value as 'admin' | 'user' | 'risk' | 'incident')}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm appearance-none cursor-pointer"
               >
                 <option value="user" className="bg-slate-800 text-slate-200">User</option>
+                <option value="risk" className="bg-slate-800 text-slate-200">Risk</option>
+                <option value="incident" className="bg-slate-800 text-slate-200">Incident</option>
                 <option value="admin" className="bg-slate-800 text-slate-200">Admin</option>
               </select>
             </div>
