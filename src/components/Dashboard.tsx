@@ -161,7 +161,7 @@ export default function Dashboard({
      const url = URL.createObjectURL(blob);
      const link = document.createElement('a');
      link.setAttribute('href', url);
-     link.setAttribute('download', `incidents_${new Date().toISOString().slice(0,10)}.csv`);
+     link.setAttribute('download', `risks_${new Date().toISOString().slice(0,10)}.csv`);
      link.style.visibility = 'hidden';
      document.body.appendChild(link);
      link.click();
@@ -174,7 +174,7 @@ export default function Dashboard({
      printWindow.document.write(`
        <html>
          <head>
-           <title>Incidents Report</title>
+           <title>Risks Report</title>
            <style>
              body { font-family: Arial, sans-serif; margin: 20px; }
              table { border-collapse: collapse; width: 100%; }
@@ -185,7 +185,7 @@ export default function Dashboard({
          </head>
          <body>
            <div class="header">
-             <h1>Incidents Report</h1>
+             <h1>Risks Report</h1>
              <p>Generated on: ${new Date().toLocaleString()}</p>
            </div>
            <table>
@@ -282,7 +282,7 @@ export default function Dashboard({
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { label: 'Total Incidents', value: stats.total, icon: BarChart3, color: 'text-blue-600 bg-blue-50' },
+            { label: 'Total Risks', value: stats.total, icon: BarChart3, color: 'text-blue-600 bg-blue-50' },
             { label: 'Open', value: stats.open, icon: AlertCircle, color: 'text-blue-600 bg-blue-50' },
             { label: 'In Progress', value: stats.inProgress, icon: Clock, color: 'text-amber-600 bg-amber-50' },
             { label: 'Critical Risk', value: stats.critical, icon: AlertCircle, color: 'text-red-600 bg-red-50' },
@@ -308,7 +308,7 @@ export default function Dashboard({
                  <input
                    value={search}
                    onChange={(e) => setSearch(e.target.value)}
-                   placeholder="Search incidents..."
+                   placeholder="Search risks..."
                    className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50"
                  />
                </div>
@@ -357,7 +357,7 @@ export default function Dashboard({
                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm whitespace-nowrap"
              >
                <Plus className="w-4 h-4" />
-               New Incident
+               New Risk
              </button>
           </div>
         </div>
@@ -366,7 +366,7 @@ export default function Dashboard({
         <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
             <span className="text-sm font-medium text-slate-700">
-              Showing {filtered.length} of {incidents.length} incidents
+              Showing {filtered.length} of {incidents.length} risks
             </span>
           </div>
           <div className="overflow-x-auto">
@@ -406,7 +406,7 @@ export default function Dashboard({
                 {filtered.length === 0 ? (
                   <tr>
                     <td colSpan={12} className="px-4 py-12 text-center text-slate-400 text-sm">
-                      No incidents found. Adjust your filters or create a new incident.
+                      No risks found. Adjust your filters or create a new risk.
                     </td>
                   </tr>
                 ) : (
@@ -520,10 +520,10 @@ export default function Dashboard({
               <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
                 <Trash2 className="w-5 h-5 text-red-600" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-800">Delete Incident?</h3>
+              <h3 className="text-lg font-semibold text-slate-800">Delete Risk?</h3>
             </div>
             <p className="text-sm text-slate-500 mb-6">
-              This action cannot be undone. The incident will be permanently removed.
+              This action cannot be undone. The risk will be permanently removed.
             </p>
             <div className="flex gap-3 justify-end">
               <button
@@ -551,7 +551,7 @@ export default function Dashboard({
             <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold">{viewTarget.incidentRefNo}</h3>
-                <p className="text-slate-400 text-xs mt-0.5">Incident Detail View</p>
+                <p className="text-slate-400 text-xs mt-0.5">Risk Detail View</p>
               </div>
               <button onClick={() => setViewTarget(null)} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors">
                 <X className="w-5 h-5" />
@@ -560,8 +560,8 @@ export default function Dashboard({
             <div className="p-6 space-y-4">
               {[
                 { label: 'Sr. No.',          value: viewTarget.srNo },
-                { label: 'Incident Ref No.',  value: viewTarget.incidentRefNo },
-                { label: 'Incident Date',     value: new Date(viewTarget.incidentDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }) },
+                { label: 'Risk Ref No.',  value: viewTarget.incidentRefNo },
+                { label: 'Risk Date',     value: new Date(viewTarget.incidentDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }) },
                 { label: 'Category',          value: viewTarget.incidentCategory },
               ].map(({ label, value }) => (
                 <div key={label} className="flex items-center justify-between py-2 border-b border-slate-50">
@@ -602,7 +602,7 @@ export default function Dashboard({
                 </div>
               </div>
               <div>
-                <p className="text-sm font-medium text-slate-500 mb-1">Incident Details</p>
+                <p className="text-sm font-medium text-slate-500 mb-1">Risk Details</p>
                 <p className="text-sm text-slate-700 leading-relaxed">{viewTarget.incidentDetails}</p>
               </div>
               {viewTarget.rca && (
@@ -618,7 +618,7 @@ export default function Dashboard({
                 className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors"
               >
                 <Pencil className="w-3.5 h-3.5" />
-                Edit Incident
+                Edit Risk
               </button>
             </div>
           </div>
