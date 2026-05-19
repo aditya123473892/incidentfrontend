@@ -1,4 +1,4 @@
-export type Likelihood = 'Very Low' | 'Low' | 'Medium' | 'High' | 'Very High';
+export type Emergency = 'Very Low' | 'Low' | 'Medium' | 'High' | 'Very High';
 export type Impact = 'Very Low' | 'Low' | 'Medium' | 'High' | 'Very High';
 export type RiskLevel = 'Low' | 'Medium' | 'High' | 'Critical';
 export type Priority = 'Low' | 'Medium' | 'High' | 'Critical';
@@ -21,7 +21,7 @@ export interface Incident {
   incidentDate: string;
   incidentDetails: string;
   incidentCategory: Category;
-  likelihood: Likelihood;
+  emergency: Emergency;
   impact: Impact;
   riskScore: number;
   riskLevel: RiskLevel;

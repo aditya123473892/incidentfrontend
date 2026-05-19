@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { X, Lock } from 'lucide-react';
-import { Incident, Likelihood, Impact, Priority, Status, Category, RiskLevel } from '../types';
+import { Incident, Emergency, Impact, Priority, Status, Category, RiskLevel } from '../types';
 
 interface IncidentFormProps {
   incident: Incident | null;
@@ -10,13 +10,13 @@ interface IncidentFormProps {
   onClose: () => void;
 }
 
-const likelihoods: Likelihood[] = ['Very Low', 'Low', 'Medium', 'High', 'Very High'];
+const emergencies: Emergency[] = ['Very Low', 'Low', 'Medium', 'High', 'Very High'];
 const impacts: Impact[] = ['Very Low', 'Low', 'Medium', 'High', 'Very High'];
 const priorities: Priority[] = ['Low', 'Medium', 'High', 'Critical'];
 const statuses: Status[] = ['Open', 'In Progress', 'Resolved', 'Closed'];
 const categories: Category[]   = ['Network', 'Hardware', 'Software', 'Security', 'Database', 'Application', 'Other'];
 
-const LIKELIHOOD_MAP: Record<Likelihood, number> = {
+const EMERGENCY_MAP: Record<Emergency, number> = {
   'Very Low':  1, Low: 2, Medium: 3, High: 4, 'Very High': 5,
 };
 const IMPACT_MAP: Record<Impact, number> = {
@@ -30,8 +30,8 @@ function getRiskLevel(score: number): RiskLevel {
   return 'Low';
 }
 
-function computeScore(l: string, i: string): number {
-  return (LIKELIHOOD_MAP[l as Likelihood] ?? 1) * (IMPACT_MAP[i as Impact] ?? 1);
+function computeScore(e: Emergency, i: Impact): number {
+  return (EMERGENCY_MAP[e] ?? 1) * (IMPACT_MAP[i] ?? 1);
 }
 
 function generateRefNo(srNo: number) {
@@ -45,7 +45,7 @@ export default function IncidentForm({ incident, nextSrNo, isAdmin = true, onSav
     incidentDate:    incident?.incidentDate    ?? new Date().toISOString().split('T')[0],
     incidentDetails: incident?.incidentDetails ?? '',
     incidentCategory:incident?.incidentCategory ?? 'Application',
-    likelihood:      incident?.likelihood      ?? 'Medium',
+    emergency:      incident?.emergency      ?? 'Medium',
     impact:          incident?.impact          ?? 'Medium',
     priority:        incident?.priority        ?? 'Medium',
     riskScore:       incident?.riskScore       ?? 9,
@@ -55,8 +55,8 @@ export default function IncidentForm({ incident, nextSrNo, isAdmin = true, onSav
   });
 
   const riskScore = useMemo(
-    () => computeScore(form.likelihood, form.impact),
-    [form.likelihood, form.impact]
+    () => computeScore(form.emergency, form.impact),
+    [form.emergency, form.impact]
   );
   const riskLevel = useMemo(
     () => getRiskLevel(riskScore),
@@ -169,18 +169,6 @@ export default function IncidentForm({ incident, nextSrNo, isAdmin = true, onSav
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Likelihood</label>
-              <select
-                value={form.likelihood}
-                onChange={(e) => set('likelihood', e.target.value as Likelihood)}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50"
-              >
-                {likelihoods.map((l) => (
-                  <option key={l} value={l}>{l}</option>
-                ))}
-              </select>
-            </div>
-            <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="block text-sm font-medium text-slate-700">Impact</label>
                 {!isAdmin && (
@@ -205,6 +193,18 @@ export default function IncidentForm({ incident, nextSrNo, isAdmin = true, onSav
                   {form.impact || <span className="italic">Not set</span>}
                 </div>
               )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Emergency</label>
+              <select
+                value={form.emergency}
+                onChange={(e) => set('emergency', e.target.value as Emergency)}
+                className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50"
+              >
+                {emergencies.map((e) => (
+                  <option key={e} value={e}>{e}</option>
+                ))}
+              </select>
             </div>
           </div>
 

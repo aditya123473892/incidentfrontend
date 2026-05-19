@@ -4,7 +4,7 @@ import {
   ChevronUp, ChevronDown, Filter, AlertCircle, Clock,
   CheckCircle2, XCircle, BarChart3, X,
 } from 'lucide-react';
-import { Incident, Priority, Status, Likelihood, Impact, RiskLevel } from '../types';
+import { Incident, Priority, Status, Emergency, Impact, RiskLevel } from '../types';
 import IncidentForm from './IncidentForm';
 
 interface DashboardProps {
@@ -24,7 +24,7 @@ const priorityColors: Record<Priority, string> = {
   Critical: 'bg-red-100 text-red-700 ring-red-200',
 };
 
-const likelihoodColors: Record<Likelihood, string> = {
+const emergencyColors: Record<Emergency, string> = {
   'Very Low': 'bg-slate-100 text-slate-700 ring-slate-200',
   Low: 'bg-blue-100 text-blue-700 ring-blue-200',
   Medium: 'bg-amber-100 text-amber-700 ring-amber-200',
@@ -131,15 +131,15 @@ export default function Dashboard({
 
    const handleDownloadExcel = () => {
      // Convert filtered data to CSV format
-     const headers = ['Sr. No.', 'Ref No.', 'Date', 'Description', 'Category', 'Likelihood', 'Impact', 'Priority', 'Risk Score', 'Status', 'RCA'];
+     const headers = ['Sr. No.', 'Ref No.', 'Date', 'Description', 'Category', 'Impact', 'Emergency', 'Priority', 'Risk Score', 'Status', 'RCA'];
      const rows = filtered.map(incident => [
        incident.srNo,
        incident.incidentRefNo,
        formatDateDDMMYY(incident.incidentDate),
        incident.incidentDetails,
        incident.incidentCategory,
-       incident.likelihood,
        incident.impact,
+       incident.emergency,
        incident.priority,
        incident.riskScore,
        incident.status,
@@ -196,8 +196,8 @@ export default function Dashboard({
                  <th>Date</th>
                  <th>Description</th>
                  <th>Category</th>
-                 <th>Likelihood</th>
                  <th>Impact</th>
+                 <th>Emergency</th>
                  <th>Priority</th>
                  <th>Risk Score</th>
                  <th>Status</th>
@@ -212,8 +212,8 @@ export default function Dashboard({
                    <td>${formatDateDDMMYY(incident.incidentDate)}</td>
                    <td>${incident.incidentDetails}</td>
                    <td>${incident.incidentCategory}</td>
-                   <td>${incident.likelihood}</td>
                    <td>${incident.impact}</td>
+                   <td>${incident.emergency}</td>
                    <td>${incident.priority}</td>
                    <td>${incident.riskScore}</td>
                    <td>${incident.status}</td>
@@ -379,8 +379,8 @@ export default function Dashboard({
                     { key: 'incidentDate', label: 'Date' },
                     { key: 'incidentDetails', label: 'Description' },
                     { key: 'incidentCategory', label: 'Category' },
-                    { key: 'likelihood', label: 'Likelihood' },
                     { key: 'impact', label: 'Impact' },
+                    { key: 'emergency', label: 'Emergency' },
                     { key: 'priority', label: 'Priority' },
                     { key: 'riskScore', label: 'Risk Score' },
                     { key: 'status', label: 'Status' },
@@ -436,13 +436,13 @@ export default function Dashboard({
                         </span>
                       </td>
                       <td className="px-4 py-3.5">
-                        <span className={`inline-block text-xs px-2.5 py-1 rounded-full font-semibold ring-1 ${likelihoodColors[incident.likelihood]}`}>
-                          {incident.likelihood}
+                        <span className={`inline-block text-xs px-2.5 py-1 rounded-full font-semibold ring-1 ${impactColors[incident.impact]}`}>
+                          {incident.impact}
                         </span>
                       </td>
                       <td className="px-4 py-3.5">
-                        <span className={`inline-block text-xs px-2.5 py-1 rounded-full font-semibold ring-1 ${impactColors[incident.impact]}`}>
-                          {incident.impact}
+                        <span className={`inline-block text-xs px-2.5 py-1 rounded-full font-semibold ring-1 ${emergencyColors[incident.emergency]}`}>
+                          {incident.emergency}
                         </span>
                       </td>
                       <td className="px-4 py-3.5">
@@ -570,9 +570,9 @@ export default function Dashboard({
                 </div>
               ))}
               <div className="py-2 border-b border-slate-50 flex items-center gap-3">
-                <span className="text-sm font-medium text-slate-500 whitespace-nowrap">Likelihood</span>
-                <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ring-1 ${likelihoodColors[viewTarget.likelihood]}`}>
-                  {viewTarget.likelihood}
+                <span className="text-sm font-medium text-slate-500 whitespace-nowrap">Emergency</span>
+                <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ring-1 ${emergencyColors[viewTarget.emergency]}`}>
+                  {viewTarget.emergency}
                 </span>
               </div>
               <div className="py-2 border-b border-slate-50 flex items-center gap-3">
