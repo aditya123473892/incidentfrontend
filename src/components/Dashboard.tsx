@@ -61,6 +61,8 @@ const statusIcons: Record<Status, React.ReactNode> = {
   Closed: <XCircle className="w-3 h-3" />,
 };
 
+const RISK_OWNER_NAME = 'Amit Kumar Singh';
+
 type SortKey = keyof Incident;
 type SortDir = 'asc' | 'desc';
 
@@ -75,14 +77,11 @@ const formatDateDDMMYY = (dateString: string | Date): string => {
   return `${day}/${month}/${year}`;
 };
 
-const formatDateDDMMYYYYHyphen = (dateString: string | Date): string => {
+const formatDateMDYYYY = (dateString: string | Date): string => {
   const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
   if (isNaN(date.getTime())) return String(dateString);
 
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const year = date.getFullYear();
-  return `${day}-${month}-${year}`;
+  return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
 };
 
 const escapeExcelCell = (value: unknown): string =>
@@ -92,12 +91,6 @@ const escapeExcelCell = (value: unknown): string =>
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
-
-const getRiskSignOffs = (incident: Incident) => ({
-  createdBy: incident.createdBy || 'Sushil',
-  updatedBy: incident.updatedBy || 'Dheeraj Adlakha',
-  approvedBy: incident.approvedBy || 'Amit Kumar Singh',
-});
 
 const getRiskLikelihood = (incident: Incident): Emergency =>
   incident.likelihood ?? incident.emergency ?? 'Medium';
@@ -157,25 +150,18 @@ export default function Dashboard({
      : 1;
 
    const handleDownloadExcel = () => {
+     const approvalDate = '4/1/2025';
      const worksheetRows = filtered.map((incident) => {
-       const signOffs = getRiskSignOffs(incident);
-
        return `
          <tr class="data-row">
-           <td>${escapeExcelCell(incident.srNo)}</td>
            <td>${escapeExcelCell(incident.incidentRefNo)}</td>
-           <td>${escapeExcelCell(formatDateDDMMYY(incident.incidentDate))}</td>
+           <td>${escapeExcelCell(formatDateMDYYYY(incident.incidentDate))}</td>
            <td class="left">${escapeExcelCell(incident.incidentDetails)}</td>
-           <td>${escapeExcelCell(incident.incidentCategory)}</td>
-           <td>${escapeExcelCell(incident.impact)}</td>
+           <td>${escapeExcelCell(RISK_OWNER_NAME)}</td>
            <td>${escapeExcelCell(getRiskLikelihood(incident))}</td>
-           <td>${escapeExcelCell(incident.priority)}</td>
-           <td>${escapeExcelCell(incident.riskScore)}</td>
-           <td>${escapeExcelCell(incident.status)}</td>
+           <td>${escapeExcelCell(incident.impact)}</td>
+           <td>${escapeExcelCell(incident.riskLevel)}</td>
            <td class="left">${escapeExcelCell(incident.rca)}</td>
-           <td>${escapeExcelCell(signOffs.createdBy)}</td>
-           <td>${escapeExcelCell(signOffs.updatedBy)}</td>
-           <td>${escapeExcelCell(signOffs.approvedBy)}</td>
          </tr>
        `;
      }).join('');
@@ -200,66 +186,66 @@ export default function Dashboard({
            <![endif]-->
            <style>
              table { border-collapse: collapse; font-family: Calibri, Arial, sans-serif; font-size: 11pt; }
-             col.sr-no { width: 70px; }
-             col.ref-no { width: 110px; }
-             col.date { width: 100px; }
+             col.risk-id { width: 80px; }
+             col.raised-date { width: 135px; }
              col.description { width: 260px; }
-             col.category { width: 120px; }
-             col.rating { width: 120px; }
-             col.score { width: 95px; }
-             col.status { width: 120px; }
-             col.rca { width: 225px; }
-             col.signoff { width: 150px; }
+             col.owner { width: 160px; }
+             col.likelihood { width: 160px; }
+             col.impact { width: 160px; }
+             col.severity { width: 175px; }
+             col.mitigation { width: 225px; }
              td { vertical-align: middle; text-align: center; padding: 4px 6px; }
              .title { height: 42px; font-weight: 700; font-size: 12pt; text-align: center; }
              .blank { height: 22px; }
              .header td { height: 40px; background: #8c8c8c; color: #000; font-weight: 700; border: 1px solid #000; }
              .data-row td { height: 58px; border: 1px solid #000; white-space: normal; }
+             .empty-row td { height: 18px; border: 1px solid #000; }
+             .signature td { height: 18px; border: 1px solid #000; font-weight: 700; text-align: left; }
+             .signature-date td { height: 18px; border: 1px solid #000; font-weight: 700; text-align: left; }
              .left { text-align: left; }
-             .gap td { height: 58px; }
-             .signature-label td,
-             .signature-name td,
-             .signature-role td { height: 26px; font-weight: 700; text-align: left; }
-             .signature-line td { height: 34px; color: #1f4fbf; font-family: "Segoe Script", "Brush Script MT", cursive; font-size: 16pt; text-align: left; }
            </style>
          </head>
          <body>
            <table>
              <colgroup>
-               <col class="sr-no" />
-               <col class="ref-no" />
-               <col class="date" />
+               <col class="risk-id" />
+               <col class="raised-date" />
                <col class="description" />
-               <col class="category" />
-               <col class="rating" />
-               <col class="rating" />
-               <col class="rating" />
-               <col class="score" />
-               <col class="status" />
-               <col class="rca" />
-               <col class="signoff" />
-               <col class="signoff" />
-               <col class="signoff" />
+               <col class="owner" />
+               <col class="likelihood" />
+               <col class="impact" />
+               <col class="severity" />
+               <col class="mitigation" />
              </colgroup>
-             <tr><td class="title" colspan="14">Risk Management Table Data</td></tr>
-             <tr><td class="blank" colspan="14"></td></tr>
+             <tr><td class="title" colspan="8">Risk Register for Elogisol Application : Client Name : Pristine Group</td></tr>
+             <tr><td class="blank" colspan="8"></td></tr>
              <tr class="header">
-               <td>Sr. No.</td>
-               <td>Ref No.</td>
-               <td>Date</td>
-               <td>Description</td>
-               <td>Category</td>
-               <td>Impact</td>
-               <td>Likelihood</td>
-               <td>Priority</td>
-               <td>Risk Score</td>
-               <td>Status</td>
-               <td>RCA</td>
-               <td>Created By</td>
-               <td>Updated By</td>
-               <td>Approved By</td>
+               <td>Risk ID</td>
+               <td>Risk Raised Date</td>
+               <td>Risk Description</td>
+               <td>Owner</td>
+               <td>Likelihood of Risk</td>
+               <td>Impact of Risk</td>
+               <td>Severity (Risk Rating)</td>
+               <td>Mitigation Action</td>
              </tr>
              ${worksheetRows}
+             <tr class="empty-row"><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+             <tr class="empty-row"><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+             <tr class="signature">
+               <td></td><td>Created By</td><td></td><td></td><td></td><td>Verified By</td><td></td><td>Approved By</td>
+             </tr>
+             <tr class="empty-row"><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+             <tr class="signature">
+               <td></td><td>Sushil</td><td></td><td></td><td></td><td>Dheeraj Adlakha</td><td></td><td>Amit Kumar Singh</td>
+             </tr>
+             <tr class="signature-date">
+               <td></td><td>${approvalDate}</td><td></td><td></td><td></td><td>${approvalDate}</td><td></td><td>${approvalDate}</td>
+             </tr>
+             <tr class="signature">
+               <td></td><td>Team Leader</td><td></td><td></td><td></td><td>Project Manager</td><td></td><td>Director</td>
+             </tr>
+             <tr class="empty-row"><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
            </table>
          </body>
        </html>
@@ -481,42 +467,34 @@ export default function Dashboard({
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 text-left">
-                  {[
-                    { key: 'srNo', label: 'Sr. No.' },
-                    { key: 'incidentRefNo', label: 'Ref No.' },
-                    { key: 'incidentDate', label: 'Date' },
-                    { key: 'incidentDetails', label: 'Description' },
-                    { key: 'incidentCategory', label: 'Category' },
-                    { key: 'impact', label: 'Impact' },
-                    { key: 'likelihood', label: 'Likelihood' },
-                    { key: 'priority', label: 'Priority' },
-                    { key: 'riskScore', label: 'Risk Score' },
-                    { key: 'status', label: 'Status' },
-                    { key: 'rca', label: 'RCA' },
-                    { key: 'createdBy', label: 'Created By' },
-                    { key: 'updatedBy', label: 'Updated By' },
-                    { key: 'approvedBy', label: 'Approved By' },
-                  ].map(({ key, label }) => (
-                    <th
-                      key={key}
-                      onClick={() => handleSort(key as SortKey)}
-                      className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide cursor-pointer hover:text-slate-800 select-none whitespace-nowrap"
-                    >
-                      <div className="flex items-center gap-1">
-                        {label}
-                        <SortIcon k={key as SortKey} />
-                      </div>
-                    </th>
-                  ))}
-                  <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide text-right">
-                    Actions
+                  <th onClick={() => handleSort('incidentRefNo')} className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide cursor-pointer hover:text-slate-800 select-none whitespace-nowrap">
+                    <div className="flex items-center gap-1">Risk ID<SortIcon k="incidentRefNo" /></div>
+                  </th>
+                  <th onClick={() => handleSort('incidentDate')} className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide cursor-pointer hover:text-slate-800 select-none whitespace-nowrap">
+                    <div className="flex items-center gap-1">Risk Raised Date<SortIcon k="incidentDate" /></div>
+                  </th>
+                  <th onClick={() => handleSort('incidentDetails')} className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide cursor-pointer hover:text-slate-800 select-none whitespace-nowrap">
+                    <div className="flex items-center gap-1">Risk Description<SortIcon k="incidentDetails" /></div>
+                  </th>
+                  <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Owner</th>
+                  <th onClick={() => handleSort('likelihood')} className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide cursor-pointer hover:text-slate-800 select-none whitespace-nowrap">
+                    <div className="flex items-center gap-1">Likelihood of Risk<SortIcon k="likelihood" /></div>
+                  </th>
+                  <th onClick={() => handleSort('impact')} className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide cursor-pointer hover:text-slate-800 select-none whitespace-nowrap">
+                    <div className="flex items-center gap-1">Impact of Risk<SortIcon k="impact" /></div>
+                  </th>
+                  <th onClick={() => handleSort('riskLevel')} className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide cursor-pointer hover:text-slate-800 select-none whitespace-nowrap">
+                    <div className="flex items-center gap-1">Severity (Risk Rating)<SortIcon k="riskLevel" /></div>
+                  </th>
+                  <th onClick={() => handleSort('rca')} className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide cursor-pointer hover:text-slate-800 select-none whitespace-nowrap">
+                    <div className="flex items-center gap-1">Mitigation Action<SortIcon k="rca" /></div>
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={15} className="px-4 py-12 text-center text-slate-400 text-sm">
+                    <td colSpan={8} className="px-4 py-12 text-center text-slate-400 text-sm">
                       No risks found. Adjust your filters or create a new risk.
                     </td>
                   </tr>
@@ -526,7 +504,6 @@ export default function Dashboard({
                       key={incident.id}
                       className="hover:bg-slate-50 transition-colors group"
                     >
-                      <td className="px-4 py-3.5 text-slate-500 font-mono text-xs">{incident.srNo}</td>
                       <td className="px-4 py-3.5">
                         <button
                           onClick={() => setViewTarget(incident)}
@@ -536,14 +513,15 @@ export default function Dashboard({
                         </button>
                       </td>
                       <td className="px-4 py-3.5 text-slate-600 whitespace-nowrap">
-                        {formatDateDDMMYY(incident.incidentDate)}
+                        {formatDateMDYYYY(incident.incidentDate)}
                       </td>
                       <td className="px-4 py-3.5 text-slate-700">
                         <p>{incident.incidentDetails}</p>
                       </td>
+                      <td className="px-4 py-3.5 text-slate-600 whitespace-nowrap">{RISK_OWNER_NAME}</td>
                       <td className="px-4 py-3.5">
-                        <span className="inline-block bg-slate-100 text-slate-600 text-xs px-2.5 py-1 rounded-full font-medium">
-                          {incident.incidentCategory}
+                        <span className={`inline-block text-xs px-2.5 py-1 rounded-full font-semibold ring-1 ${emergencyColors[getRiskLikelihood(incident)]}`}>
+                          {getRiskLikelihood(incident)}
                         </span>
                       </td>
                       <td className="px-4 py-3.5">
@@ -552,24 +530,8 @@ export default function Dashboard({
                         </span>
                       </td>
                       <td className="px-4 py-3.5">
-                        <span className={`inline-block text-xs px-2.5 py-1 rounded-full font-semibold ring-1 ${emergencyColors[getRiskLikelihood(incident)]}`}>
-                          {getRiskLikelihood(incident)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <span className={`inline-block text-xs px-2.5 py-1 rounded-full font-semibold ring-1 ${priorityColors[incident.priority]}`}>
-                          {incident.priority}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3.5">
                         <span className={`inline-block text-xs px-2.5 py-1 rounded-full font-bold ring-1 ${riskLevelColors[incident.riskLevel]} border`}>
-                          {incident.riskScore}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <span className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-semibold ring-1 ${statusColors[incident.status]}`}>
-                          {statusIcons[incident.status]}
-                          {incident.status}
+                          {incident.riskLevel}
                         </span>
                       </td>
                       <td className="px-4 py-3.5 text-slate-600">
@@ -578,35 +540,6 @@ export default function Dashboard({
                         ) : (
                           <span className="text-slate-300 text-xs italic">—</span>
                         )}
-                      </td>
-                      <td className="px-4 py-3.5 text-slate-600 whitespace-nowrap">
-                        {getRiskSignOffs(incident).createdBy}
-                      </td>
-                      <td className="px-4 py-3.5 text-slate-600 whitespace-nowrap">
-                        {getRiskSignOffs(incident).updatedBy}
-                      </td>
-                      <td className="px-4 py-3.5 text-slate-600 whitespace-nowrap">
-                        {getRiskSignOffs(incident).approvedBy}
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          {userRole === 'admin' && (
-                            <button
-                              onClick={() => setDeleteConfirm(incident.id)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
-                          <button
-                            onClick={() => { setEditTarget(incident); setFormOpen(true); }}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                            title="Edit"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                        </div>
                       </td>
                     </tr>
                   ))

@@ -29,9 +29,6 @@ export interface Incident {
   priority: Priority;
   rca: string;
   status: Status;
-  createdBy?: string;
-  updatedBy?: string;
-  approvedBy?: string;
 }
 
 export interface IncidentManagement {
