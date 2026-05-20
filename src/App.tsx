@@ -3,7 +3,7 @@ import LoginPage from './components/LoginPage';
 import SignupPage from './components/SignupPage';
 import Dashboard from './components/Dashboard';
 import IncidentManagementPage from './components/IncidentManagementPage';
-import { Incident, IncidentManagement } from './types';
+import { Incident, IncidentManagement, SystemUser } from './types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://incidentbackend.onrender.com/api';
 const MODE_KEY = 'app_mode';
@@ -37,6 +37,18 @@ const modeConfig = {
   },
 };
 
+const modeForRole = (role: UserRole, fallback: PageMode): PageMode => {
+  if (role === 'risk' || role === 'user') return 'incidents';
+  if (role === 'incident') return 'incident-management';
+  return fallback;
+};
+
+const canAccessMode = (role: UserRole, mode: PageMode): boolean => {
+  if (role === 'admin') return true;
+  if (mode === 'incidents') return role === 'risk' || role === 'user';
+  return role === 'incident';
+};
+
 export default function App() {
   const [showSignup, setShowSignup] = useState(false);
   const [pageMode, setPageMode] = useState<PageMode>(() => modeFromPath());
@@ -48,6 +60,7 @@ export default function App() {
   });
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [incidentManagements, setIncidentManagements] = useState<IncidentManagement[]>([]);
+  const [systemUsers, setSystemUsers] = useState<SystemUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,6 +73,7 @@ export default function App() {
   useEffect(() => {
     if (token) {
       setLoading(true);
+      fetchSystemUsers();
       if (pageMode === 'incident-management') {
         fetchIncidentManagements();
       } else {
@@ -67,6 +81,23 @@ export default function App() {
       }
     }
   }, [token, pageMode]);
+
+  const fetchSystemUsers = async () => {
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_URL}/auth/users`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        setSystemUsers([]);
+        return;
+      }
+      const data = await res.json();
+      setSystemUsers(Array.isArray(data) ? data : []);
+    } catch {
+      setSystemUsers([]);
+    }
+  };
 
   const fetchIncidents = async () => {
     try {
@@ -111,20 +142,25 @@ export default function App() {
       });
       if (!res.ok) return false;
       const data = await res.json();
+      const accountRole = data.user.role as UserRole;
+      const targetMode = modeForRole(accountRole, pageMode);
+      const targetConfig = modeConfig[targetMode];
 
-      if (data.user.role !== activeMode.expectedRole && data.user.role !== 'admin') {
+      if (!canAccessMode(accountRole, targetMode)) {
         return false;
       }
 
-      localStorage.setItem(activeMode.tokenKey, data.token);
-      localStorage.setItem(activeMode.userKey, JSON.stringify(data.user));
+      localStorage.setItem(MODE_KEY, targetMode);
+      localStorage.setItem(targetConfig.tokenKey, data.token);
+      localStorage.setItem(targetConfig.userKey, JSON.stringify(data.user));
+      setPageMode(targetMode);
       setToken(data.token);
       setUser(data.user);
       return true;
     } catch {
       return false;
     }
-  }, [activeMode]);
+  }, [pageMode]);
 
   const handleSignup = useCallback(async (fullName: string, email: string, password: string, role: UserRole): Promise<boolean> => {
     try {
@@ -135,20 +171,25 @@ export default function App() {
       });
       if (!res.ok) return false;
       const data = await res.json();
+      const accountRole = data.user.role as UserRole;
+      const targetMode = modeForRole(accountRole, pageMode);
+      const targetConfig = modeConfig[targetMode];
 
-      if (data.user.role !== activeMode.expectedRole && data.user.role !== 'admin') {
+      if (!canAccessMode(accountRole, targetMode)) {
         return false;
       }
 
-      localStorage.setItem(activeMode.tokenKey, data.token);
-      localStorage.setItem(activeMode.userKey, JSON.stringify(data.user));
+      localStorage.setItem(MODE_KEY, targetMode);
+      localStorage.setItem(targetConfig.tokenKey, data.token);
+      localStorage.setItem(targetConfig.userKey, JSON.stringify(data.user));
+      setPageMode(targetMode);
       setToken(data.token);
       setUser(data.user);
       return true;
     } catch {
       return false;
     }
-  }, [activeMode]);
+  }, [pageMode]);
 
   const handleAdd = async (incident: Incident) => {
     try {
@@ -198,6 +239,7 @@ export default function App() {
     localStorage.removeItem(activeMode.userKey);
     setToken(null);
     setUser(null);
+    setSystemUsers([]);
     setIncidents([]);
     setIncidentManagements([]);
     setError(null);
@@ -281,6 +323,7 @@ export default function App() {
           incidents={incidents}
           userEmail={user?.email ?? ''}
           userRole={user?.role ?? 'user'}
+          systemUsers={systemUsers}
           onAdd={handleAdd}
           onUpdate={handleUpdate}
           onDelete={handleDelete}

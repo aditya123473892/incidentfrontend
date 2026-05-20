@@ -14,6 +14,13 @@ export type Category =
 
 export type Urgency = 'Low' | 'Medium' | 'High';
 
+export interface SystemUser {
+  id: number;
+  email: string;
+  fullName: string;
+  role: string;
+}
+
 export interface Incident {
   id: string;
   srNo: number;

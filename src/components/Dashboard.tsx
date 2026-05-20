@@ -4,13 +4,14 @@ import {
   ChevronUp, ChevronDown, Filter, AlertCircle, Clock,
   CheckCircle2, XCircle, BarChart3, X,
 } from 'lucide-react';
-import { Incident, Priority, Status, Emergency, Impact, RiskLevel } from '../types';
+import { Incident, Priority, Status, Emergency, Impact, RiskLevel, SystemUser } from '../types';
 import IncidentForm from './IncidentForm';
 
 interface DashboardProps {
   incidents: Incident[];
   userEmail: string;
   userRole?: string;
+  systemUsers?: SystemUser[];
   onAdd: (incident: Incident) => void;
   onUpdate: (incident: Incident) => void;
   onDelete: (id: string) => void;
@@ -95,10 +96,14 @@ const escapeExcelCell = (value: unknown): string =>
 const getRiskLikelihood = (incident: Incident): Emergency =>
   incident.likelihood ?? incident.emergency ?? 'Medium';
 
+const hasAdminReview = (incident: Incident): boolean =>
+  Boolean(incident.rca?.trim());
+
 export default function Dashboard({
   incidents,
   userEmail,
   userRole,
+  systemUsers = [],
   onAdd,
   onUpdate,
   onDelete,
@@ -113,6 +118,17 @@ export default function Dashboard({
   const [editTarget, setEditTarget] = useState<Incident | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [viewTarget, setViewTarget] = useState<Incident | null>(null);
+  const [approveTarget, setApproveTarget] = useState<Incident | null>(null);
+  const [selectedVerifier, setSelectedVerifier] = useState('');
+  const [approvedDisplay, setApprovedDisplay] = useState<Record<string, string>>({});
+  const isAdmin = userRole === 'admin';
+
+  const verifierOptions = [
+    ...systemUsers
+      .filter((user) => user.email !== userEmail)
+      .map((user) => user.fullName || user.email),
+    'Dheeraj Adlakha',
+  ].filter((name, index, list) => name && list.indexOf(name) === index);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
@@ -152,6 +168,7 @@ export default function Dashboard({
    const handleDownloadExcel = () => {
      const approvalDate = '4/1/2025';
      const worksheetRows = filtered.map((incident) => {
+       const reviewed = hasAdminReview(incident);
        return `
          <tr class="data-row">
            <td>${escapeExcelCell(incident.incidentRefNo)}</td>
@@ -159,9 +176,9 @@ export default function Dashboard({
            <td class="left">${escapeExcelCell(incident.incidentDetails)}</td>
            <td>${escapeExcelCell(RISK_OWNER_NAME)}</td>
            <td>${escapeExcelCell(getRiskLikelihood(incident))}</td>
-           <td>${escapeExcelCell(incident.impact)}</td>
-           <td>${escapeExcelCell(incident.riskLevel)}</td>
-           <td class="left">${escapeExcelCell(incident.rca)}</td>
+           <td>${escapeExcelCell(reviewed ? incident.impact : '')}</td>
+           <td>${escapeExcelCell(reviewed ? incident.riskLevel : '')}</td>
+           <td class="left">${escapeExcelCell(reviewed ? incident.rca : '')}</td>
          </tr>
        `;
      }).join('');
@@ -201,7 +218,7 @@ export default function Dashboard({
              .data-row td { height: 58px; border: 1px solid #000; white-space: normal; }
              .empty-row td { height: 18px; border: 1px solid #000; }
              .signature td { height: 18px; border: 1px solid #000; font-weight: 700; text-align: left; }
-             .signature-date td { height: 18px; border: 1px solid #000; font-weight: 700; text-align: left; }
+             .signature-date td { height: 18px; border: 1px solid #000; font-weight: 700; text-align: left; mso-number-format:"\\@"; }
              .left { text-align: left; }
            </style>
          </head>
@@ -240,7 +257,7 @@ export default function Dashboard({
                <td></td><td>Sushil</td><td></td><td></td><td></td><td>Dheeraj Adlakha</td><td></td><td>Amit Kumar Singh</td>
              </tr>
              <tr class="signature-date">
-               <td></td><td>${approvalDate}</td><td></td><td></td><td></td><td>${approvalDate}</td><td></td><td>${approvalDate}</td>
+               <td></td><td x:str>${approvalDate}</td><td></td><td></td><td></td><td x:str>${approvalDate}</td><td></td><td x:str>${approvalDate}</td>
              </tr>
              <tr class="signature">
                <td></td><td>Team Leader</td><td></td><td></td><td></td><td>Project Manager</td><td></td><td>Director</td>
@@ -265,6 +282,7 @@ export default function Dashboard({
    const handlePrint = () => {
      // Create a printable version of the table
      const printWindow = window.open('', '_blank');
+     if (!printWindow) return;
      printWindow.document.write(`
        <html>
          <head>
@@ -306,12 +324,12 @@ export default function Dashboard({
                    <td>${formatDateDDMMYY(incident.incidentDate)}</td>
                    <td>${incident.incidentDetails}</td>
                    <td>${incident.incidentCategory}</td>
-                   <td>${incident.impact}</td>
+                   <td>${hasAdminReview(incident) ? incident.impact : ''}</td>
                    <td>${getRiskLikelihood(incident)}</td>
                    <td>${incident.priority}</td>
-                   <td>${incident.riskScore}</td>
+                   <td>${hasAdminReview(incident) ? incident.riskScore : ''}</td>
                    <td>${incident.status}</td>
-                   <td>${incident.rca || ''}</td>
+                   <td>${hasAdminReview(incident) ? incident.rca : ''}</td>
                  </tr>
                `).join('')}
              </tbody>
@@ -489,12 +507,15 @@ export default function Dashboard({
                   <th onClick={() => handleSort('rca')} className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide cursor-pointer hover:text-slate-800 select-none whitespace-nowrap">
                     <div className="flex items-center gap-1">Mitigation Action<SortIcon k="rca" /></div>
                   </th>
+                  {isAdmin && (
+                    <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Actions</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-12 text-center text-slate-400 text-sm">
+                    <td colSpan={isAdmin ? 9 : 8} className="px-4 py-12 text-center text-slate-400 text-sm">
                       No risks found. Adjust your filters or create a new risk.
                     </td>
                   </tr>
@@ -525,22 +546,55 @@ export default function Dashboard({
                         </span>
                       </td>
                       <td className="px-4 py-3.5">
-                        <span className={`inline-block text-xs px-2.5 py-1 rounded-full font-semibold ring-1 ${impactColors[incident.impact]}`}>
-                          {incident.impact}
-                        </span>
+                        {hasAdminReview(incident) ? (
+                          <span className={`inline-block text-xs px-2.5 py-1 rounded-full font-semibold ring-1 ${impactColors[incident.impact]}`}>
+                            {incident.impact}
+                          </span>
+                        ) : (
+                          <span className="text-slate-300 text-xs italic">-</span>
+                        )}
                       </td>
                       <td className="px-4 py-3.5">
-                        <span className={`inline-block text-xs px-2.5 py-1 rounded-full font-bold ring-1 ${riskLevelColors[incident.riskLevel]} border`}>
-                          {incident.riskLevel}
-                        </span>
+                        {hasAdminReview(incident) ? (
+                          <span className={`inline-block text-xs px-2.5 py-1 rounded-full font-bold ring-1 ${riskLevelColors[incident.riskLevel]} border`}>
+                            {incident.riskLevel}
+                          </span>
+                        ) : (
+                          <span className="text-slate-300 text-xs italic">-</span>
+                        )}
                       </td>
                       <td className="px-4 py-3.5 text-slate-600">
-                        {incident.rca ? (
+                        {hasAdminReview(incident) ? (
                           <p className="text-xs">{incident.rca}</p>
                         ) : (
                           <span className="text-slate-300 text-xs italic">—</span>
                         )}
+                        {approvedDisplay[incident.id] && (
+                          <p className="mt-1 text-xs text-emerald-700">
+                            Verified by {approvedDisplay[incident.id]}
+                          </p>
+                        )}
                       </td>
+                      {isAdmin && (
+                        <td className="px-4 py-3.5">
+                          <div className="flex items-center gap-2 whitespace-nowrap">
+                            <button
+                              onClick={() => { setEditTarget(incident); setFormOpen(true); }}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                              Update
+                            </button>
+                            <button
+                              onClick={() => { setApproveTarget(incident); setSelectedVerifier(approvedDisplay[incident.id] || ''); }}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              Approve
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))
                 )}
@@ -556,12 +610,66 @@ export default function Dashboard({
           incident={editTarget}
           nextSrNo={nextSrNo}
           isAdmin={userRole === 'admin'}
+          currentUserEmail={userEmail}
+          systemUsers={systemUsers}
           onSave={(inc) => {
             editTarget ? onUpdate(inc) : onAdd(inc);
             setFormOpen(false);
           }}
           onClose={() => setFormOpen(false)}
         />
+      )}
+
+      {/* Approve Modal */}
+      {approveTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setApproveTarget(null)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md">
+            <div className="flex items-start justify-between gap-4 mb-5">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-800">Approve Risk</h3>
+                <p className="text-sm text-slate-500 mt-1">{approveTarget.incidentRefNo}</p>
+              </div>
+              <button onClick={() => setApproveTarget(null)} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Verifier Name</label>
+            <select
+              value={selectedVerifier}
+              onChange={(event) => setSelectedVerifier(event.target.value)}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            >
+              <option value="">Select verifier</option>
+              {verifierOptions.map((name) => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
+            {selectedVerifier && (
+              <div className="mt-4 rounded-lg bg-emerald-50 border border-emerald-100 px-3 py-2 text-sm text-emerald-800">
+                Verified by {selectedVerifier}. Approved by Amit Kumar Singh.
+              </div>
+            )}
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setApproveTarget(null)}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={!selectedVerifier}
+                onClick={() => {
+                  setApprovedDisplay((current) => ({ ...current, [approveTarget.id]: selectedVerifier }));
+                  setApproveTarget(null);
+                }}
+                className="px-5 py-2 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-500 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+              >
+                Approve
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Delete Confirm */}
@@ -630,13 +738,21 @@ export default function Dashboard({
               </div>
               <div className="py-2 border-b border-slate-50 flex items-center gap-3">
                 <span className="text-sm font-medium text-slate-500 whitespace-nowrap">Impact</span>
-                <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ring-1 ${impactColors[viewTarget.impact]}`}>
-                  {viewTarget.impact}
-                </span>
+                {hasAdminReview(viewTarget) ? (
+                  <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ring-1 ${impactColors[viewTarget.impact]}`}>
+                    {viewTarget.impact}
+                  </span>
+                ) : (
+                  <span className="text-sm text-slate-300 italic">-</span>
+                )}
               </div>
               <div className="py-2 border-b border-slate-50 flex items-center gap-3">
                 <span className="text-sm font-medium text-slate-500 whitespace-nowrap">Risk Score</span>
-                <span className="text-sm text-slate-800 font-bold">{viewTarget.riskScore} <span className="text-xs font-normal text-slate-400">({viewTarget.riskLevel})</span></span>
+                {hasAdminReview(viewTarget) ? (
+                  <span className="text-sm text-slate-800 font-bold">{viewTarget.riskScore} <span className="text-xs font-normal text-slate-400">({viewTarget.riskLevel})</span></span>
+                ) : (
+                  <span className="text-sm text-slate-300 italic">-</span>
+                )}
               </div>
               <div className="py-2 border-b border-slate-50">
                 <div className="flex items-center justify-between mb-2">
@@ -658,10 +774,15 @@ export default function Dashboard({
                 <p className="text-sm font-medium text-slate-500 mb-1">Risk Details</p>
                 <p className="text-sm text-slate-700 leading-relaxed">{viewTarget.incidentDetails}</p>
               </div>
-              {viewTarget.rca && (
+              {hasAdminReview(viewTarget) && (
                 <div>
-                  <p className="text-sm font-medium text-slate-500 mb-1">Root Cause Analysis</p>
+                  <p className="text-sm font-medium text-slate-500 mb-1">Mitigation Action</p>
                   <p className="text-sm text-slate-700 leading-relaxed">{viewTarget.rca}</p>
+                </div>
+              )}
+              {approvedDisplay[viewTarget.id] && (
+                <div className="rounded-lg bg-emerald-50 border border-emerald-100 px-3 py-2 text-sm text-emerald-800">
+                  Verified by {approvedDisplay[viewTarget.id]}. Approved by Amit Kumar Singh.
                 </div>
               )}
             </div>
