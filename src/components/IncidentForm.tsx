@@ -45,7 +45,7 @@ export default function IncidentForm({ incident, nextSrNo, isAdmin = true, onSav
     incidentDate:    incident?.incidentDate    ?? new Date().toISOString().split('T')[0],
     incidentDetails: incident?.incidentDetails ?? '',
     incidentCategory:incident?.incidentCategory ?? 'Application',
-    emergency:      incident?.emergency      ?? 'Medium',
+    likelihood:      incident?.likelihood ?? incident?.emergency ?? 'Medium',
     impact:          incident?.impact          ?? 'Medium',
     priority:        incident?.priority        ?? 'Medium',
     riskScore:       incident?.riskScore       ?? 9,
@@ -55,8 +55,8 @@ export default function IncidentForm({ incident, nextSrNo, isAdmin = true, onSav
   });
 
   const riskScore = useMemo(
-    () => computeScore(form.emergency, form.impact),
-    [form.emergency, form.impact]
+    () => computeScore(form.likelihood, form.impact),
+    [form.likelihood, form.impact]
   );
   const riskLevel = useMemo(
     () => getRiskLevel(riskScore),
@@ -195,10 +195,10 @@ export default function IncidentForm({ incident, nextSrNo, isAdmin = true, onSav
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Emergency</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Likelihood</label>
               <select
-                value={form.emergency}
-                onChange={(e) => set('emergency', e.target.value as Emergency)}
+                value={form.likelihood}
+                onChange={(e) => set('likelihood', e.target.value as Emergency)}
                 className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50"
               >
                 {emergencies.map((e) => (

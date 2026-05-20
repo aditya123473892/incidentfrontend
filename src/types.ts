@@ -21,13 +21,17 @@ export interface Incident {
   incidentDate: string;
   incidentDetails: string;
   incidentCategory: Category;
-  emergency: Emergency;
+  likelihood: Emergency;
+  emergency?: Emergency;
   impact: Impact;
   riskScore: number;
   riskLevel: RiskLevel;
   priority: Priority;
   rca: string;
   status: Status;
+  createdBy?: string;
+  updatedBy?: string;
+  approvedBy?: string;
 }
 
 export interface IncidentManagement {

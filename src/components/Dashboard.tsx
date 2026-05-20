@@ -75,6 +75,33 @@ const formatDateDDMMYY = (dateString: string | Date): string => {
   return `${day}/${month}/${year}`;
 };
 
+const formatDateDDMMYYYYHyphen = (dateString: string | Date): string => {
+  const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+  if (isNaN(date.getTime())) return String(dateString);
+
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}-${month}-${year}`;
+};
+
+const escapeExcelCell = (value: unknown): string =>
+  String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+const getRiskSignOffs = (incident: Incident) => ({
+  createdBy: incident.createdBy || 'Sushil',
+  updatedBy: incident.updatedBy || 'Dheeraj Adlakha',
+  approvedBy: incident.approvedBy || 'Amit Kumar Singh',
+});
+
+const getRiskLikelihood = (incident: Incident): Emergency =>
+  incident.likelihood ?? incident.emergency ?? 'Medium';
+
 export default function Dashboard({
   incidents,
   userEmail,
@@ -130,38 +157,119 @@ export default function Dashboard({
      : 1;
 
    const handleDownloadExcel = () => {
-     // Convert filtered data to CSV format
-     const headers = ['Sr. No.', 'Ref No.', 'Date', 'Description', 'Category', 'Impact', 'Emergency', 'Priority', 'Risk Score', 'Status', 'RCA'];
-     const rows = filtered.map(incident => [
-       incident.srNo,
-       incident.incidentRefNo,
-       formatDateDDMMYY(incident.incidentDate),
-       incident.incidentDetails,
-       incident.incidentCategory,
-       incident.impact,
-       incident.emergency,
-       incident.priority,
-       incident.riskScore,
-       incident.status,
-       incident.rca || ''
-     ]);
+     const worksheetRows = filtered.map((incident) => {
+       const signOffs = getRiskSignOffs(incident);
 
-     // Create CSV content
-     const csvContent = [
-       headers.join(','),
-       ...rows.map(row => 
-         row.map(cell => 
-           `"${String(cell).replace(/"/g, '""')}"`
-         ).join(',')
-       )
-     ].join('\n');
+       return `
+         <tr class="data-row">
+           <td>${escapeExcelCell(incident.srNo)}</td>
+           <td>${escapeExcelCell(incident.incidentRefNo)}</td>
+           <td>${escapeExcelCell(formatDateDDMMYY(incident.incidentDate))}</td>
+           <td class="left">${escapeExcelCell(incident.incidentDetails)}</td>
+           <td>${escapeExcelCell(incident.incidentCategory)}</td>
+           <td>${escapeExcelCell(incident.impact)}</td>
+           <td>${escapeExcelCell(getRiskLikelihood(incident))}</td>
+           <td>${escapeExcelCell(incident.priority)}</td>
+           <td>${escapeExcelCell(incident.riskScore)}</td>
+           <td>${escapeExcelCell(incident.status)}</td>
+           <td class="left">${escapeExcelCell(incident.rca)}</td>
+           <td>${escapeExcelCell(signOffs.createdBy)}</td>
+           <td>${escapeExcelCell(signOffs.updatedBy)}</td>
+           <td>${escapeExcelCell(signOffs.approvedBy)}</td>
+         </tr>
+       `;
+     }).join('');
 
-     // Create blob and download
-     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+     const excelContent = `
+       <html xmlns:o="urn:schemas-microsoft-com:office:office"
+             xmlns:x="urn:schemas-microsoft-com:office:excel"
+             xmlns="http://www.w3.org/TR/REC-html40">
+         <head>
+           <meta charset="UTF-8" />
+           <!--[if gte mso 9]>
+           <xml>
+             <x:ExcelWorkbook>
+               <x:ExcelWorksheets>
+                 <x:ExcelWorksheet>
+                   <x:Name>Risk Register</x:Name>
+                   <x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
+                 </x:ExcelWorksheet>
+               </x:ExcelWorksheets>
+             </x:ExcelWorkbook>
+           </xml>
+           <![endif]-->
+           <style>
+             table { border-collapse: collapse; font-family: Calibri, Arial, sans-serif; font-size: 11pt; }
+             col.sr-no { width: 70px; }
+             col.ref-no { width: 110px; }
+             col.date { width: 100px; }
+             col.description { width: 260px; }
+             col.category { width: 120px; }
+             col.rating { width: 120px; }
+             col.score { width: 95px; }
+             col.status { width: 120px; }
+             col.rca { width: 225px; }
+             col.signoff { width: 150px; }
+             td { vertical-align: middle; text-align: center; padding: 4px 6px; }
+             .title { height: 42px; font-weight: 700; font-size: 12pt; text-align: center; }
+             .blank { height: 22px; }
+             .header td { height: 40px; background: #8c8c8c; color: #000; font-weight: 700; border: 1px solid #000; }
+             .data-row td { height: 58px; border: 1px solid #000; white-space: normal; }
+             .left { text-align: left; }
+             .gap td { height: 58px; }
+             .signature-label td,
+             .signature-name td,
+             .signature-role td { height: 26px; font-weight: 700; text-align: left; }
+             .signature-line td { height: 34px; color: #1f4fbf; font-family: "Segoe Script", "Brush Script MT", cursive; font-size: 16pt; text-align: left; }
+           </style>
+         </head>
+         <body>
+           <table>
+             <colgroup>
+               <col class="sr-no" />
+               <col class="ref-no" />
+               <col class="date" />
+               <col class="description" />
+               <col class="category" />
+               <col class="rating" />
+               <col class="rating" />
+               <col class="rating" />
+               <col class="score" />
+               <col class="status" />
+               <col class="rca" />
+               <col class="signoff" />
+               <col class="signoff" />
+               <col class="signoff" />
+             </colgroup>
+             <tr><td class="title" colspan="14">Risk Management Table Data</td></tr>
+             <tr><td class="blank" colspan="14"></td></tr>
+             <tr class="header">
+               <td>Sr. No.</td>
+               <td>Ref No.</td>
+               <td>Date</td>
+               <td>Description</td>
+               <td>Category</td>
+               <td>Impact</td>
+               <td>Likelihood</td>
+               <td>Priority</td>
+               <td>Risk Score</td>
+               <td>Status</td>
+               <td>RCA</td>
+               <td>Created By</td>
+               <td>Updated By</td>
+               <td>Approved By</td>
+             </tr>
+             ${worksheetRows}
+           </table>
+         </body>
+       </html>
+     `;
+
+     const blob = new Blob([excelContent], { type: 'application/vnd.ms-excel;charset=utf-8;' });
      const url = URL.createObjectURL(blob);
      const link = document.createElement('a');
      link.setAttribute('href', url);
-     link.setAttribute('download', `risks_${new Date().toISOString().slice(0,10)}.csv`);
+     link.setAttribute('download', `risk_register_${new Date().toISOString().slice(0,10)}.xls`);
      link.style.visibility = 'hidden';
      document.body.appendChild(link);
      link.click();
@@ -213,7 +321,7 @@ export default function Dashboard({
                    <td>${incident.incidentDetails}</td>
                    <td>${incident.incidentCategory}</td>
                    <td>${incident.impact}</td>
-                   <td>${incident.emergency}</td>
+                   <td>${getRiskLikelihood(incident)}</td>
                    <td>${incident.priority}</td>
                    <td>${incident.riskScore}</td>
                    <td>${incident.status}</td>
@@ -380,11 +488,14 @@ export default function Dashboard({
                     { key: 'incidentDetails', label: 'Description' },
                     { key: 'incidentCategory', label: 'Category' },
                     { key: 'impact', label: 'Impact' },
-                    { key: 'emergency', label: 'Emergency' },
+                    { key: 'likelihood', label: 'Likelihood' },
                     { key: 'priority', label: 'Priority' },
                     { key: 'riskScore', label: 'Risk Score' },
                     { key: 'status', label: 'Status' },
                     { key: 'rca', label: 'RCA' },
+                    { key: 'createdBy', label: 'Created By' },
+                    { key: 'updatedBy', label: 'Updated By' },
+                    { key: 'approvedBy', label: 'Approved By' },
                   ].map(({ key, label }) => (
                     <th
                       key={key}
@@ -405,7 +516,7 @@ export default function Dashboard({
               <tbody className="divide-y divide-slate-50">
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={12} className="px-4 py-12 text-center text-slate-400 text-sm">
+                    <td colSpan={15} className="px-4 py-12 text-center text-slate-400 text-sm">
                       No risks found. Adjust your filters or create a new risk.
                     </td>
                   </tr>
@@ -441,8 +552,8 @@ export default function Dashboard({
                         </span>
                       </td>
                       <td className="px-4 py-3.5">
-                        <span className={`inline-block text-xs px-2.5 py-1 rounded-full font-semibold ring-1 ${emergencyColors[incident.emergency]}`}>
-                          {incident.emergency}
+                        <span className={`inline-block text-xs px-2.5 py-1 rounded-full font-semibold ring-1 ${emergencyColors[getRiskLikelihood(incident)]}`}>
+                          {getRiskLikelihood(incident)}
                         </span>
                       </td>
                       <td className="px-4 py-3.5">
@@ -467,6 +578,15 @@ export default function Dashboard({
                         ) : (
                           <span className="text-slate-300 text-xs italic">—</span>
                         )}
+                      </td>
+                      <td className="px-4 py-3.5 text-slate-600 whitespace-nowrap">
+                        {getRiskSignOffs(incident).createdBy}
+                      </td>
+                      <td className="px-4 py-3.5 text-slate-600 whitespace-nowrap">
+                        {getRiskSignOffs(incident).updatedBy}
+                      </td>
+                      <td className="px-4 py-3.5 text-slate-600 whitespace-nowrap">
+                        {getRiskSignOffs(incident).approvedBy}
                       </td>
                       <td className="px-4 py-3.5">
                         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -571,8 +691,8 @@ export default function Dashboard({
               ))}
               <div className="py-2 border-b border-slate-50 flex items-center gap-3">
                 <span className="text-sm font-medium text-slate-500 whitespace-nowrap">Emergency</span>
-                <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ring-1 ${emergencyColors[viewTarget.emergency]}`}>
-                  {viewTarget.emergency}
+                <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ring-1 ${emergencyColors[getRiskLikelihood(viewTarget)]}`}>
+                  {getRiskLikelihood(viewTarget)}
                 </span>
               </div>
               <div className="py-2 border-b border-slate-50 flex items-center gap-3">
