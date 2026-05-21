@@ -408,7 +408,7 @@ export default function Dashboard({
               <Shield className="w-5 h-5 text-white" />
             </div>
             <div>
-              <span className="font-bold text-lg tracking-tight">IncidentIQ</span>
+              <span className="font-bold text-lg tracking-tight">Incident/Risk</span>
               <span className="ml-2 text-slate-400 text-xs hidden sm:inline"> Management System</span>
             </div>
           </div>
