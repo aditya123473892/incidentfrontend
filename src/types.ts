@@ -36,6 +36,19 @@ export interface Incident {
   priority: Priority;
   rca: string;
   status: Status;
+  supportingDocName?: string;
+  supportingDocMime?: string;
+  adminSupportingDocName?: string;
+  adminSupportingDocMime?: string;
+  createdByEmail?: string;
+  createdByName?: string;
+  approvalStatus?: 'Pending' | 'Approved';
+  verifiedByEmail?: string;
+  verifiedByName?: string;
+  approvedByEmail?: string;
+  approvedByName?: string;
+  approvedAt?: string;
+  pendingSupportingDoc?: File | null;
 }
 
 export interface IncidentManagement {

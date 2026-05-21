@@ -3,7 +3,7 @@ import { Shield, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 
 interface LoginPageProps {
   onLogin: (email: string, password: string) => Promise<boolean>;
-  onSwitchToSignup: () => void;
+  onSwitchToSignup?: () => void;
   appName?: string;
   subtitle?: string;
   defaultEmail?: string;
@@ -120,16 +120,18 @@ export default function LoginPage({
               Demo credentials: <span className="text-slate-400">{defaultEmail}</span> /{' '}
               <span className="text-slate-400">{demoPassword}</span>
             </p>
-            <p className="text-center text-sm text-slate-400 mt-3">
-              Don't have an account?{' '}
-              <button
-                type="button"
-                onClick={onSwitchToSignup}
-                className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
-              >
-                Sign Up
-              </button>
-            </p>
+            {onSwitchToSignup && (
+              <p className="text-center text-sm text-slate-400 mt-3">
+                Don't have an account?{' '}
+                <button
+                  type="button"
+                  onClick={onSwitchToSignup}
+                  className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                >
+                  Sign Up
+                </button>
+              </p>
+            )}
           </div>
         </div>
       </div>

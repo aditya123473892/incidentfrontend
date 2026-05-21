@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import LoginPage from './components/LoginPage';
-import SignupPage from './components/SignupPage';
 import Dashboard from './components/Dashboard';
 import IncidentManagementPage from './components/IncidentManagementPage';
 import { Incident, IncidentManagement, SystemUser } from './types';
@@ -50,7 +49,6 @@ const canAccessMode = (role: UserRole, mode: PageMode): boolean => {
 };
 
 export default function App() {
-  const [showSignup, setShowSignup] = useState(false);
   const [pageMode, setPageMode] = useState<PageMode>(() => modeFromPath());
   const activeMode = modeConfig[pageMode];
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(modeConfig[modeFromPath()].tokenKey));
@@ -162,45 +160,39 @@ export default function App() {
     }
   }, [pageMode]);
 
-  const handleSignup = useCallback(async (fullName: string, email: string, password: string, role: UserRole): Promise<boolean> => {
-    try {
-      const res = await fetch(`${API_URL}/auth/signup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fullName, email, password, role }),
-      });
-      if (!res.ok) return false;
-      const data = await res.json();
-      const accountRole = data.user.role as UserRole;
-      const targetMode = modeForRole(accountRole, pageMode);
-      const targetConfig = modeConfig[targetMode];
-
-      if (!canAccessMode(accountRole, targetMode)) {
-        return false;
-      }
-
-      localStorage.setItem(MODE_KEY, targetMode);
-      localStorage.setItem(targetConfig.tokenKey, data.token);
-      localStorage.setItem(targetConfig.userKey, JSON.stringify(data.user));
-      setPageMode(targetMode);
-      setToken(data.token);
-      setUser(data.user);
-      return true;
-    } catch {
-      return false;
-    }
-  }, [pageMode]);
+  const uploadSupportingDoc = async (incidentId: string, file?: File | null) => {
+    if (!file || !token) return;
+    const encodedName = encodeURIComponent(file.name);
+    const encodedType = encodeURIComponent(file.type || 'application/octet-stream');
+    const res = await fetch(`${API_URL}/incidents/${incidentId}/supporting-doc?fileName=${encodedName}&mimeType=${encodedType}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/octet-stream',
+      },
+      body: await file.arrayBuffer(),
+    });
+    if (!res.ok) throw new Error('Failed to upload supporting document');
+  };
 
   const handleAdd = async (incident: Incident) => {
     try {
+      const { pendingSupportingDoc, ...incidentPayload } = incident;
       const res = await fetch(`${API_URL}/incidents`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(incident),
+        body: JSON.stringify(incidentPayload),
       });
       if (!res.ok) throw new Error('Failed');
       const newIncident = await res.json();
-      setIncidents((prev) => [...prev, newIncident]);
+      await uploadSupportingDoc(newIncident.id, pendingSupportingDoc);
+      setIncidents((prev) => [...prev, {
+        ...newIncident,
+        supportingDocName: user?.role === 'admin' ? newIncident.supportingDocName : pendingSupportingDoc?.name ?? newIncident.supportingDocName,
+        supportingDocMime: user?.role === 'admin' ? newIncident.supportingDocMime : pendingSupportingDoc?.type ?? newIncident.supportingDocMime,
+        adminSupportingDocName: user?.role === 'admin' ? pendingSupportingDoc?.name ?? newIncident.adminSupportingDocName : newIncident.adminSupportingDocName,
+        adminSupportingDocMime: user?.role === 'admin' ? pendingSupportingDoc?.type ?? newIncident.adminSupportingDocMime : newIncident.adminSupportingDocMime,
+      }]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed');
     }
@@ -208,14 +200,22 @@ export default function App() {
 
   const handleUpdate = async (updated: Incident) => {
     try {
+      const { pendingSupportingDoc, ...incidentPayload } = updated;
       const res = await fetch(`${API_URL}/incidents/${updated.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(updated),
+        body: JSON.stringify(incidentPayload),
       });
       if (!res.ok) throw new Error('Failed');
       const updatedIncident = await res.json();
-      setIncidents((prev) => prev.map((i) => (i.id === updated.id ? updatedIncident : i)));
+      await uploadSupportingDoc(updated.id, pendingSupportingDoc);
+      setIncidents((prev) => prev.map((i) => (i.id === updated.id ? {
+        ...updatedIncident,
+        supportingDocName: user?.role === 'admin' ? updatedIncident.supportingDocName : pendingSupportingDoc?.name ?? updatedIncident.supportingDocName,
+        supportingDocMime: user?.role === 'admin' ? updatedIncident.supportingDocMime : pendingSupportingDoc?.type ?? updatedIncident.supportingDocMime,
+        adminSupportingDocName: user?.role === 'admin' ? pendingSupportingDoc?.name ?? updatedIncident.adminSupportingDocName : updatedIncident.adminSupportingDocName,
+        adminSupportingDocMime: user?.role === 'admin' ? pendingSupportingDoc?.type ?? updatedIncident.adminSupportingDocMime : updatedIncident.adminSupportingDocMime,
+      } : i)));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed');
     }
@@ -229,6 +229,24 @@ export default function App() {
       });
       if (!res.ok) throw new Error('Failed');
       setIncidents((prev) => prev.filter((i) => i.id !== id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed');
+    }
+  };
+
+  const handleApprove = async (incidentId: string, verifier: SystemUser | { fullName: string; email?: string }) => {
+    try {
+      const res = await fetch(`${API_URL}/incidents/${incidentId}/approve`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          verifiedByEmail: verifier.email ?? '',
+          verifiedByName: verifier.fullName,
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to approve');
+      const approvedIncident = await res.json();
+      setIncidents((prev) => prev.map((i) => (i.id === incidentId ? approvedIncident : i)));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed');
     }
@@ -289,18 +307,15 @@ export default function App() {
   };
 
   if (!token) {
-    return showSignup
-      ? <SignupPage onSwitch={() => setShowSignup(false)} onSignup={handleSignup} />
-      : (
-        <LoginPage
-          onLogin={handleLogin}
-          onSwitchToSignup={() => setShowSignup(true)}
-          appName={activeMode.appName}
-          subtitle={activeMode.subtitle}
-          defaultEmail={activeMode.defaultEmail}
-          demoPassword={activeMode.demoPassword}
-        />
-      );
+    return (
+      <LoginPage
+        onLogin={handleLogin}
+        appName={activeMode.appName}
+        subtitle={activeMode.subtitle}
+        defaultEmail={activeMode.defaultEmail}
+        demoPassword={activeMode.demoPassword}
+      />
+    );
   }
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50">Loading…</div>;
@@ -324,8 +339,11 @@ export default function App() {
           userEmail={user?.email ?? ''}
           userRole={user?.role ?? 'user'}
           systemUsers={systemUsers}
+          apiUrl={API_URL}
+          token={token}
           onAdd={handleAdd}
           onUpdate={handleUpdate}
+          onApprove={handleApprove}
           onDelete={handleDelete}
           onLogout={handleLogout}
         />

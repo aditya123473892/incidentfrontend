@@ -12,8 +12,11 @@ interface DashboardProps {
   userEmail: string;
   userRole?: string;
   systemUsers?: SystemUser[];
+  apiUrl: string;
+  token: string | null;
   onAdd: (incident: Incident) => void;
   onUpdate: (incident: Incident) => void;
+  onApprove: (incidentId: string, verifier: SystemUser | { fullName: string; email?: string }) => void;
   onDelete: (id: string) => void;
   onLogout: () => void;
 }
@@ -79,10 +82,23 @@ const formatDateDDMMYY = (dateString: string | Date): string => {
 };
 
 const formatDateMDYYYY = (dateString: string | Date): string => {
-  const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+  const normalized = typeof dateString === 'string' && dateString.includes('T')
+    ? dateString.split('T')[0]
+    : dateString;
+  const date = typeof normalized === 'string' ? new Date(`${normalized}T00:00:00`) : normalized;
   if (isNaN(date.getTime())) return String(dateString);
 
   return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
+};
+
+const formatDateLong = (dateString: string | Date): string => {
+  const normalized = typeof dateString === 'string' && dateString.includes('T')
+    ? dateString.split('T')[0]
+    : dateString;
+  const date = typeof normalized === 'string' ? new Date(`${normalized}T00:00:00`) : normalized;
+  if (isNaN(date.getTime())) return String(dateString);
+
+  return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
 };
 
 const escapeExcelCell = (value: unknown): string =>
@@ -99,13 +115,19 @@ const getRiskLikelihood = (incident: Incident): Emergency =>
 const hasAdminReview = (incident: Incident): boolean =>
   Boolean(incident.rca?.trim());
 
+const getRiskRefNo = (incident: Incident): string =>
+  `RSK-${String(incident.srNo).padStart(3, '0')}`;
+
 export default function Dashboard({
   incidents,
   userEmail,
   userRole,
   systemUsers = [],
+  apiUrl,
+  token,
   onAdd,
   onUpdate,
+  onApprove,
   onDelete,
   onLogout,
 }: DashboardProps) {
@@ -119,16 +141,41 @@ export default function Dashboard({
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [viewTarget, setViewTarget] = useState<Incident | null>(null);
   const [approveTarget, setApproveTarget] = useState<Incident | null>(null);
-  const [selectedVerifier, setSelectedVerifier] = useState('');
-  const [approvedDisplay, setApprovedDisplay] = useState<Record<string, string>>({});
+  const [selectedVerifierEmail, setSelectedVerifierEmail] = useState('');
   const isAdmin = userRole === 'admin';
 
   const verifierOptions = [
-    ...systemUsers
-      .filter((user) => user.email !== userEmail)
-      .map((user) => user.fullName || user.email),
-    'Dheeraj Adlakha',
-  ].filter((name, index, list) => name && list.indexOf(name) === index);
+    ...systemUsers,
+    { id: -1, email: '', fullName: 'Dheeraj Adlakha', role: 'verifier' },
+  ].filter((user, index, list) => {
+    const optionKey = (user.email || user.fullName).toLowerCase();
+    if (list.findIndex((item) => (item.email || item.fullName).toLowerCase() === optionKey) !== index) {
+      return false;
+    }
+    if (!approveTarget) return user.email !== userEmail;
+    const creatorEmail = approveTarget.createdByEmail?.toLowerCase();
+    const creatorName = approveTarget.createdByName?.trim().toLowerCase();
+    return (
+      (!user.email || user.email !== userEmail) &&
+      (user.fullName || user.email).trim().toLowerCase() !== RISK_OWNER_NAME.toLowerCase() &&
+      (!creatorEmail || user.email.toLowerCase() !== creatorEmail) &&
+      (!creatorName || (user.fullName || user.email).trim().toLowerCase() !== creatorName)
+    );
+  });
+
+  const selectedVerifier = verifierOptions.find((user) => (user.email || user.fullName) === selectedVerifierEmail);
+
+  const viewSupportingDoc = async (incident: Incident, source: 'user' | 'admin' = 'user') => {
+    const fileName = source === 'admin' ? incident.adminSupportingDocName : incident.supportingDocName;
+    if (!token || !fileName) return;
+    const res = await fetch(`${apiUrl}/incidents/${incident.id}/supporting-doc?source=${source}`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
@@ -166,12 +213,14 @@ export default function Dashboard({
      : 1;
 
    const handleDownloadExcel = () => {
-     const approvalDate = '4/1/2025';
+     const approvalDate = filtered.find((incident) => incident.approvedAt)?.approvedAt
+       ? formatDateMDYYYY(filtered.find((incident) => incident.approvedAt)!.approvedAt!)
+       : '4/1/2025';
      const worksheetRows = filtered.map((incident) => {
        const reviewed = hasAdminReview(incident);
        return `
          <tr class="data-row">
-           <td>${escapeExcelCell(incident.incidentRefNo)}</td>
+           <td>${escapeExcelCell(getRiskRefNo(incident))}</td>
            <td>${escapeExcelCell(formatDateMDYYYY(incident.incidentDate))}</td>
            <td class="left">${escapeExcelCell(incident.incidentDetails)}</td>
            <td>${escapeExcelCell(RISK_OWNER_NAME)}</td>
@@ -320,7 +369,7 @@ export default function Dashboard({
                ${filtered.map(incident => `
                  <tr>
                    <td>${incident.srNo}</td>
-                   <td>${incident.incidentRefNo}</td>
+                   <td>${getRiskRefNo(incident)}</td>
                    <td>${formatDateDDMMYY(incident.incidentDate)}</td>
                    <td>${incident.incidentDetails}</td>
                    <td>${incident.incidentCategory}</td>
@@ -530,7 +579,7 @@ export default function Dashboard({
                           onClick={() => setViewTarget(incident)}
                           className="font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors"
                         >
-                          {incident.incidentRefNo}
+                          {getRiskRefNo(incident)}
                         </button>
                       </td>
                       <td className="px-4 py-3.5 text-slate-600 whitespace-nowrap">
@@ -569,9 +618,9 @@ export default function Dashboard({
                         ) : (
                           <span className="text-slate-300 text-xs italic">—</span>
                         )}
-                        {approvedDisplay[incident.id] && (
+                        {incident.approvalStatus === 'Approved' && incident.verifiedByName && (
                           <p className="mt-1 text-xs text-emerald-700">
-                            Verified by {approvedDisplay[incident.id]}
+                            Verified by {incident.verifiedByName}
                           </p>
                         )}
                       </td>
@@ -580,18 +629,36 @@ export default function Dashboard({
                           <div className="flex items-center gap-2 whitespace-nowrap">
                             <button
                               onClick={() => { setEditTarget(incident); setFormOpen(true); }}
+                              disabled={incident.approvalStatus === 'Approved'}
                               className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
                             >
                               <Pencil className="w-3.5 h-3.5" />
                               Update
                             </button>
                             <button
-                              onClick={() => { setApproveTarget(incident); setSelectedVerifier(approvedDisplay[incident.id] || ''); }}
+                              onClick={() => { setApproveTarget(incident); setSelectedVerifierEmail(incident.verifiedByEmail || incident.verifiedByName || ''); }}
+                              disabled={incident.approvalStatus === 'Approved'}
                               className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
                             >
                               <CheckCircle2 className="w-3.5 h-3.5" />
                               Approve
                             </button>
+                            {incident.supportingDocName && (
+                              <button
+                                onClick={() => viewSupportingDoc(incident)}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
+                              >
+                                View Doc
+                              </button>
+                            )}
+                            {incident.adminSupportingDocName && (
+                              <button
+                                onClick={() => viewSupportingDoc(incident, 'admin')}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
+                              >
+                                Admin Doc
+                              </button>
+                            )}
                           </div>
                         </td>
                       )}
@@ -610,8 +677,6 @@ export default function Dashboard({
           incident={editTarget}
           nextSrNo={nextSrNo}
           isAdmin={userRole === 'admin'}
-          currentUserEmail={userEmail}
-          systemUsers={systemUsers}
           onSave={(inc) => {
             editTarget ? onUpdate(inc) : onAdd(inc);
             setFormOpen(false);
@@ -628,26 +693,33 @@ export default function Dashboard({
             <div className="flex items-start justify-between gap-4 mb-5">
               <div>
                 <h3 className="text-lg font-semibold text-slate-800">Approve Risk</h3>
-                <p className="text-sm text-slate-500 mt-1">{approveTarget.incidentRefNo}</p>
+                <p className="text-sm text-slate-500 mt-1">{getRiskRefNo(approveTarget)}</p>
               </div>
               <button onClick={() => setApproveTarget(null)} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
+            <div className="rounded-lg bg-slate-50 border border-slate-100 px-3 py-2 text-sm text-slate-600 mb-4">
+              <div>Raised Date: {formatDateMDYYYY(approveTarget.incidentDate)}</div>
+              {approveTarget.createdByName && <div>Created By: {approveTarget.createdByName}</div>}
+              {approveTarget.approvedAt && <div>Approved At: {formatDateMDYYYY(approveTarget.approvedAt)}</div>}
+            </div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Verifier Name</label>
             <select
-              value={selectedVerifier}
-              onChange={(event) => setSelectedVerifier(event.target.value)}
+              value={selectedVerifierEmail}
+              onChange={(event) => setSelectedVerifierEmail(event.target.value)}
               className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
             >
               <option value="">Select verifier</option>
-              {verifierOptions.map((name) => (
-                <option key={name} value={name}>{name}</option>
+              {verifierOptions.map((user) => (
+                <option key={user.email || user.fullName} value={user.email || user.fullName}>
+                  {user.fullName || user.email}
+                </option>
               ))}
             </select>
             {selectedVerifier && (
               <div className="mt-4 rounded-lg bg-emerald-50 border border-emerald-100 px-3 py-2 text-sm text-emerald-800">
-                Verified by {selectedVerifier}. Approved by Amit Kumar Singh.
+                Verified by {selectedVerifier.fullName || selectedVerifier.email}. Approved by Amit Kumar Singh.
               </div>
             )}
             <div className="flex justify-end gap-3 mt-6">
@@ -660,7 +732,7 @@ export default function Dashboard({
               <button
                 disabled={!selectedVerifier}
                 onClick={() => {
-                  setApprovedDisplay((current) => ({ ...current, [approveTarget.id]: selectedVerifier }));
+                  if (selectedVerifier) onApprove(approveTarget.id, selectedVerifier);
                   setApproveTarget(null);
                 }}
                 className="px-5 py-2 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-500 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
@@ -711,7 +783,7 @@ export default function Dashboard({
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
             <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold">{viewTarget.incidentRefNo}</h3>
+                <h3 className="text-lg font-semibold">{getRiskRefNo(viewTarget)}</h3>
                 <p className="text-slate-400 text-xs mt-0.5">Risk Detail View</p>
               </div>
               <button onClick={() => setViewTarget(null)} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors">
@@ -721,8 +793,8 @@ export default function Dashboard({
             <div className="p-6 space-y-4">
               {[
                 { label: 'Sr. No.',          value: viewTarget.srNo },
-                { label: 'Risk Ref No.',  value: viewTarget.incidentRefNo },
-                { label: 'Risk Date',     value: new Date(viewTarget.incidentDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }) },
+                { label: 'Risk Ref No.',  value: getRiskRefNo(viewTarget) },
+                { label: 'Risk Date',     value: formatDateLong(viewTarget.incidentDate) },
                 { label: 'Category',          value: viewTarget.incidentCategory },
               ].map(({ label, value }) => (
                 <div key={label} className="flex items-center justify-between py-2 border-b border-slate-50">
@@ -742,14 +814,6 @@ export default function Dashboard({
                   <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ring-1 ${impactColors[viewTarget.impact]}`}>
                     {viewTarget.impact}
                   </span>
-                ) : (
-                  <span className="text-sm text-slate-300 italic">-</span>
-                )}
-              </div>
-              <div className="py-2 border-b border-slate-50 flex items-center gap-3">
-                <span className="text-sm font-medium text-slate-500 whitespace-nowrap">Risk Score</span>
-                {hasAdminReview(viewTarget) ? (
-                  <span className="text-sm text-slate-800 font-bold">{viewTarget.riskScore} <span className="text-xs font-normal text-slate-400">({viewTarget.riskLevel})</span></span>
                 ) : (
                   <span className="text-sm text-slate-300 italic">-</span>
                 )}
@@ -780,20 +844,22 @@ export default function Dashboard({
                   <p className="text-sm text-slate-700 leading-relaxed">{viewTarget.rca}</p>
                 </div>
               )}
-              {approvedDisplay[viewTarget.id] && (
+              {viewTarget.approvalStatus === 'Approved' && viewTarget.verifiedByName && (
                 <div className="rounded-lg bg-emerald-50 border border-emerald-100 px-3 py-2 text-sm text-emerald-800">
-                  Verified by {approvedDisplay[viewTarget.id]}. Approved by Amit Kumar Singh.
+                  Verified by {viewTarget.verifiedByName}. Approved by {viewTarget.approvedByName || 'Amit Kumar Singh'}.
                 </div>
               )}
             </div>
             <div className="px-6 pb-5 flex justify-end">
-              <button
-                onClick={() => { setEditTarget(viewTarget); setViewTarget(null); setFormOpen(true); }}
-                className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors"
-              >
-                <Pencil className="w-3.5 h-3.5" />
-                Edit Risk
-              </button>
+              {viewTarget.approvalStatus !== 'Approved' && (
+                <button
+                  onClick={() => { setEditTarget(viewTarget); setViewTarget(null); setFormOpen(true); }}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  Edit Risk
+                </button>
+              )}
             </div>
           </div>
         </div>
