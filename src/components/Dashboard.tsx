@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   Plus, Search, LogOut, Shield, Pencil, Trash2,
   ChevronUp, ChevronDown, Filter, AlertCircle, Clock,
-  CheckCircle2, XCircle, BarChart3, X,
+  CheckCircle2, XCircle, X,
 } from 'lucide-react';
 import { Incident, Priority, Status, Emergency, Impact, RiskLevel, SystemUser } from '../types';
 import IncidentForm from './IncidentForm';
@@ -116,7 +116,10 @@ const hasAdminReview = (incident: Incident): boolean =>
   Boolean(incident.rca?.trim());
 
 const getRiskRefNo = (incident: Incident): string =>
-  `RSK-${String(incident.srNo).padStart(3, '0')}`;
+  `R${String(incident.srNo).padStart(3, '0')}`;
+
+const getClientName = (incident: Incident): 'Pristine Group' | 'Elogisol Internal' =>
+  incident.clientName ?? 'Pristine Group';
 
 export default function Dashboard({
   incidents,
@@ -133,7 +136,7 @@ export default function Dashboard({
 }: DashboardProps) {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<Status | 'All'>('All');
-  const [filterPriority, setFilterPriority] = useState<Priority | 'All'>('All');
+  const [filterClientName, setFilterClientName] = useState<'All' | 'Pristine Group' | 'Elogisol Internal'>('All');
   const [sortKey, setSortKey] = useState<SortKey>('srNo');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [formOpen, setFormOpen] = useState(false);
@@ -191,8 +194,8 @@ export default function Dashboard({
         (i.incidentDetails && i.incidentDetails.toLowerCase().includes(q)) ||
         (i.incidentCategory && i.incidentCategory.toLowerCase().includes(q));
       const matchStatus    = filterStatus    === 'All' || i.status    === filterStatus;
-      const matchPriority  = filterPriority  === 'All' || i.priority  === filterPriority;
-      return matchSearch && matchStatus && matchPriority;
+      const matchClient    = filterClientName === 'All' || getClientName(i) === filterClientName;
+      return matchSearch && matchStatus && matchClient;
     })
     .sort((a, b) => {
       const av = a[sortKey] ?? '';
@@ -200,13 +203,6 @@ export default function Dashboard({
       const cmp = String(av).localeCompare(String(bv), undefined, { numeric: true });
       return sortDir === 'asc' ? cmp : -cmp;
     });
-
-  const stats = {
-    total: incidents.length,
-    open: incidents.filter((i) => i && i.status === 'Open').length,
-    inProgress: incidents.filter((i) => i && i.status === 'In Progress').length,
-    critical: incidents.filter((i) => i && i.riskLevel === 'Critical').length,
-  };
 
    const nextSrNo = incidents.length > 0
      ? Math.max(...incidents.map((i) => i.srNo || 0)) + 1
@@ -440,62 +436,36 @@ export default function Dashboard({
         </nav>
 
       <div className="max-w-[1400px] mx-auto px-6 py-8 space-y-6">
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { label: 'Total Risks', value: stats.total, icon: BarChart3, color: 'text-blue-600 bg-blue-50' },
-            { label: 'Open', value: stats.open, icon: AlertCircle, color: 'text-blue-600 bg-blue-50' },
-            { label: 'In Progress', value: stats.inProgress, icon: Clock, color: 'text-amber-600 bg-amber-50' },
-            { label: 'Critical Risk', value: stats.critical, icon: AlertCircle, color: 'text-red-600 bg-red-50' },
-          ].map(({ label, value, icon: Icon, color }) => (
-            <div key={label} className="bg-white rounded-xl p-4 shadow-sm border border-slate-100 flex items-center gap-4">
-              <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${color}`}>
-                <Icon className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-slate-800">{value}</div>
-                <div className="text-xs text-slate-500">{label}</div>
-              </div>
-            </div>
-          ))}
-        </div>
+
 
         {/* Controls */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4">
           <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
              <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full sm:w-auto">
-               <div className="relative flex-1 max-w-sm">
-                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                 <input
-                   value={search}
-                   onChange={(e) => setSearch(e.target.value)}
-                   placeholder="Search risks..."
-                   className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50"
-                 />
-               </div>
+          
                <div className="flex items-center gap-2">
-                 <Filter className="w-4 h-4 text-slate-400" />
+                 
                  <select
                    value={filterStatus}
                    onChange={(e) => setFilterStatus(e.target.value as Status | 'All')}
                    className="border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50"
-                 >
-                   <option value="All">All Status</option>
-                   {(['Open', 'In Progress', 'Resolved', 'Closed'] as Status[]).map((s) => (
-                     <option key={s} value={s}>{s}</option>
-                   ))}
-                 </select>
-                 <select
-                   value={filterPriority}
-                   onChange={(e) => setFilterPriority(e.target.value as Priority | 'All')}
-                   className="border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50"
-                 >
-                   <option value="All">All Priority</option>
-                   {(['Critical', 'High', 'Medium', 'Low'] as Priority[]).map((p) => (
-                     <option key={p} value={p}>{p}</option>
-                   ))}
-                 </select>
-               </div>
+                  >
+                    <option value="All">All Status</option>
+                    {(['Open','Closed'] as Status[]).map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={filterClientName}
+                    onChange={(e) => setFilterClientName(e.target.value as 'All' | 'Pristine Group' | 'Elogisol Internal')}
+                    className="border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50"
+                  >
+                    <option value="All">Client Name</option>
+                    <option value="Pristine Group">Pristine Group</option>
+                    <option value="Elogisol Internal">Elogisol Internal</option>
+                  </select>
+              
+                </div>
              </div>
              <div className="flex items-center gap-3">
                <button

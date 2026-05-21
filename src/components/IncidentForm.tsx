@@ -15,6 +15,7 @@ const impacts: Impact[] = ['Very Low', 'Low', 'Medium', 'High', 'Very High'];
 const priorities: Priority[] = ['Low', 'Medium', 'High', 'Critical'];
 const statuses: Status[] = ['Open', 'In Progress', 'Resolved', 'Closed'];
 const categories: Category[] = ['Network', 'Hardware', 'Software', 'Security', 'Database', 'Application', 'Other'];
+const clientNames = ['Pristine Group', 'Elogisol Internal'] as const;
 const RISK_OWNER_NAME = 'Amit Kumar Singh';
 
 const LIKELIHOOD_MAP: Record<Emergency, number> = {
@@ -45,7 +46,7 @@ function computeScore(likelihood: Emergency, impact: Impact): number {
 }
 
 function generateRefNo(srNo: number) {
-  return `RSK-${String(srNo).padStart(3, '0')}`;
+  return `R${String(srNo).padStart(4, '0')}`;
 }
 
 function toDateInputValue(value?: string) {
@@ -64,6 +65,7 @@ export default function IncidentForm({
   const [supportingDoc, setSupportingDoc] = useState<File | null>(null);
   const [form, setForm] = useState<Omit<Incident, 'id' | 'srNo'>>({
     incidentRefNo: incident ? generateRefNo(incident.srNo) : generateRefNo(nextSrNo),
+    clientName: incident?.clientName ?? 'Pristine Group',
     incidentDate: toDateInputValue(incident?.incidentDate),
     incidentDetails: incident?.incidentDetails ?? '',
     incidentCategory: incident?.incidentCategory ?? 'Application',
@@ -142,6 +144,21 @@ export default function IncidentForm({
                 className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm bg-slate-100 text-slate-600"
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Client Name</label>
+              <select
+                value={form.clientName}
+                onChange={(event) => set('clientName', event.target.value as typeof clientNames[number])}
+                className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50"
+              >
+                {clientNames.map((client) => (
+                  <option key={client} value={client}>{client}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Risk Raised Date</label>
               <input

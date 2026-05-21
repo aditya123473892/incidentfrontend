@@ -25,6 +25,7 @@ export interface Incident {
   id: string;
   srNo: number;
   incidentRefNo: string;
+  clientName?: 'Pristine Group' | 'Elogisol Internal';
   incidentDate: string;
   incidentDetails: string;
   incidentCategory: Category;
