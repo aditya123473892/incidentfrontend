@@ -91,6 +91,16 @@ const formatDateMDYYYY = (dateString: string | Date): string => {
   return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
 };
 
+const formatDateMDYYYYForYear = (dateString: string | Date, year: number): string => {
+  const normalized = typeof dateString === 'string' && dateString.includes('T')
+    ? dateString.split('T')[0]
+    : dateString;
+  const date = typeof normalized === 'string' ? new Date(`${normalized}T00:00:00`) : normalized;
+  if (isNaN(date.getTime())) return `4/1/${year}`;
+
+  return `${date.getMonth() + 1}/${date.getDate()}/${year}`;
+};
+
 const formatDateLong = (dateString: string | Date): string => {
   const normalized = typeof dateString === 'string' && dateString.includes('T')
     ? dateString.split('T')[0]
@@ -137,6 +147,9 @@ export default function Dashboard({
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<Status | 'All'>('All');
   const [filterClientName, setFilterClientName] = useState<'All' | 'Pristine Group' | 'Elogisol Internal'>('All');
+  const currentYear = new Date().getFullYear();
+  const previousYear = currentYear - 1;
+  const [filterRiskYear, setFilterRiskYear] = useState<number | 'All'>('All');
   const [sortKey, setSortKey] = useState<SortKey>('srNo');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [formOpen, setFormOpen] = useState(false);
@@ -195,7 +208,9 @@ export default function Dashboard({
         (i.incidentCategory && i.incidentCategory.toLowerCase().includes(q));
       const matchStatus    = filterStatus    === 'All' || i.status    === filterStatus;
       const matchClient    = filterClientName === 'All' || getClientName(i) === filterClientName;
-      return matchSearch && matchStatus && matchClient;
+      const riskDate = new Date(`${i.incidentDate.split('T')[0]}T00:00:00`);
+      const matchRiskYear = filterRiskYear === 'All' || (!isNaN(riskDate.getTime()) && riskDate.getFullYear() === filterRiskYear);
+      return matchSearch && matchStatus && matchClient && matchRiskYear;
     })
     .sort((a, b) => {
       const av = a[sortKey] ?? '';
@@ -209,9 +224,9 @@ export default function Dashboard({
      : 1;
 
    const handleDownloadExcel = () => {
-     const approvalDate = filtered.find((incident) => incident.approvedAt)?.approvedAt
-       ? formatDateMDYYYY(filtered.find((incident) => incident.approvedAt)!.approvedAt!)
-       : '4/1/2025';
+     const signatureDateSource = filtered.find((incident) => incident.approvedAt)?.approvedAt ?? new Date();
+     const signatureYear = filterRiskYear === 'All' ? currentYear : filterRiskYear;
+     const signatureDate = formatDateMDYYYYForYear(signatureDateSource, signatureYear);
      const worksheetRows = filtered.map((incident) => {
        const reviewed = hasAdminReview(incident);
        return `
@@ -302,7 +317,7 @@ export default function Dashboard({
                <td></td><td>Sushil</td><td></td><td></td><td></td><td>Dheeraj Adlakha</td><td></td><td>Amit Kumar Singh</td>
              </tr>
              <tr class="signature-date">
-               <td></td><td x:str>${approvalDate}</td><td></td><td></td><td></td><td x:str>${approvalDate}</td><td></td><td x:str>${approvalDate}</td>
+               <td></td><td x:str>${signatureDate}</td><td></td><td></td><td></td><td x:str>${signatureDate}</td><td></td><td x:str>${signatureDate}</td>
              </tr>
              <tr class="signature">
                <td></td><td>Team Leader</td><td></td><td></td><td></td><td>Project Manager</td><td></td><td>Director</td>
@@ -442,9 +457,17 @@ export default function Dashboard({
         <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4">
           <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
              <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full sm:w-auto">
-          
+               <div className="relative flex-1 max-w-sm">
+                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                 <input
+                   value={search}
+                   onChange={(e) => setSearch(e.target.value)}
+                   placeholder="Search risks..."
+                   className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50"
+                 />
+               </div>
                <div className="flex items-center gap-2">
-                 
+                 <Filter className="w-4 h-4 text-slate-400" />
                  <select
                    value={filterStatus}
                    onChange={(e) => setFilterStatus(e.target.value as Status | 'All')}
@@ -463,6 +486,15 @@ export default function Dashboard({
                     <option value="All">Client Name</option>
                     <option value="Pristine Group">Pristine Group</option>
                     <option value="Elogisol Internal">Elogisol Internal</option>
+                  </select>
+                  <select
+                    value={filterRiskYear}
+                    onChange={(e) => setFilterRiskYear(e.target.value === 'All' ? 'All' : Number(e.target.value))}
+                    className="border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50"
+                  >
+                    <option value="All">All Data</option>
+                    <option value={currentYear}>Current Year</option>
+                    <option value={previousYear}>Previous Year</option>
                   </select>
               
                 </div>
