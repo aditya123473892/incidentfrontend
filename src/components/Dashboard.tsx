@@ -638,17 +638,21 @@ export default function Dashboard({
                             <button
                               onClick={() => { setApproveTarget(incident); setSelectedVerifierEmail(incident.verifiedByEmail || incident.verifiedByName || ''); }}
                               disabled={incident.approvalStatus === 'Approved'}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
+                              className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                incident.approvalStatus === 'Approved'
+                                  ? 'bg-blue-600 text-white cursor-default'
+                                  : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                              }`}
                             >
                               <CheckCircle2 className="w-3.5 h-3.5" />
-                              Approve
+                              {incident.approvalStatus === 'Approved' ? 'Approved' : 'Approve'}
                             </button>
                             {incident.supportingDocName && (
                               <button
                                 onClick={() => viewSupportingDoc(incident)}
                                 className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
                               >
-                                View Doc
+                                User Doc
                               </button>
                             )}
                             {incident.adminSupportingDocName && (
