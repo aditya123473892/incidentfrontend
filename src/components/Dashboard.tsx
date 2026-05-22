@@ -332,7 +332,7 @@ export default function Dashboard({
      const url = URL.createObjectURL(blob);
      const link = document.createElement('a');
      link.setAttribute('href', url);
-     link.setAttribute('download', `risk_register_${new Date().toISOString().slice(0,10)}.xls`);
+     link.setAttribute('download', `Risk_Matrix_${new Date().toISOString().slice(0,10)}.xls`);
      link.style.visibility = 'hidden';
      document.body.appendChild(link);
      link.click();
