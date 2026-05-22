@@ -92,13 +92,7 @@ const formatDateMDYYYY = (dateString: string | Date): string => {
 };
 
 const formatDateMDYYYYForYear = (dateString: string | Date, year: number): string => {
-  const normalized = typeof dateString === 'string' && dateString.includes('T')
-    ? dateString.split('T')[0]
-    : dateString;
-  const date = typeof normalized === 'string' ? new Date(`${normalized}T00:00:00`) : normalized;
-  if (isNaN(date.getTime())) return `4/1/${year}`;
-
-  return `${date.getMonth() + 1}/${date.getDate()}/${year}`;
+  return `4/1/${year}`;
 };
 
 const formatDateLong = (dateString: string | Date): string => {
@@ -507,13 +501,7 @@ export default function Dashboard({
                  <span className="mr-1">📥</span>
                  Download Excel
                </button>
-               <button
-                 onClick={handlePrint}
-                 className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm"
-               >
-                 <span className="mr-1">🖨️</span>
-                 Print
-               </button>
+              
              </div>
              <button
                onClick={() => { setEditTarget(null); setFormOpen(true); }}
